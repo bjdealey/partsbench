@@ -93,7 +93,7 @@
   background: var(--panel);
   color: var(--text);
   font-weight: 500;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+  box-shadow: var(--shadow-seated);
 }
 
 .add {
@@ -133,7 +133,7 @@
   align-self: start;
   margin: 24px 0;
   border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1), 0 8px 28px rgba(15, 23, 42, 0.07);
+  box-shadow: var(--shadow-hover);
   /* `width` is a layout property, so this animates on the main thread — but it
      only runs when you pick a different device size (Mobile/Tablet/Desktop), a
      one-off at click frequency, not something that fires continuously. transform
@@ -245,7 +245,7 @@
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--panel);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+  box-shadow: var(--shadow-pop);
 }
 
 .spans {
@@ -396,7 +396,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+  box-shadow: var(--shadow-pop);
   font-size: 12.5px;
   color: var(--text);
   /* Rises into place after a removal, so the recovery arrives from where the

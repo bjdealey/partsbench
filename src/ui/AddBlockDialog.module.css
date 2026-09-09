@@ -19,7 +19,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--panel);
-  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.24);
+  box-shadow: var(--shadow-dialog);
   overflow: hidden;
   /* A quick settle on open so the modal reads as arriving over the page rather
      than blinking into existence. Exit is instant — React unmounts it. */

@@ -130,13 +130,14 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--panel);
-  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+  transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease),
+    transform var(--dur-2) var(--ease);
 }
 
 .card:hover {
   border-color: var(--border-strong);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-  transform: translateY(-1px);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
 }
 
 /* The whole-card click/focus target. Transparent and layered on top, so it takes
@@ -159,7 +160,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .card {
-    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
   }
 
   .card:hover {
