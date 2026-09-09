@@ -70,6 +70,9 @@ _Avoid_: theme, dark mode.
 **Event log**:
 The live readout of Events fired from the preview.
 
+**Contact sheet**:
+A grid showing the current Component rendered under every Theme Preset at once — the "see it everywhere" view. A viewing lens, not saved.
+
 ### Theme
 
 **Theme**:
@@ -96,6 +99,15 @@ Generate an Archetype-driven Theme and apply it everywhere at once (preview, gal
 
 **Randomise block**:
 Regenerate one selected Block's appearance Values in Compose. Content, handlers, layout, and interactive-state props are deliberately never randomised.
+
+### Variants
+
+**Variant**:
+A named, saved snapshot of a Component's Values (props, children, slots, effects), scoped to that Component and kept in the browser (localStorage). Distinct from a Preset (a Theme) and a Scene (a compose template).
+_Avoid_: preset (that is a Theme), snapshot.
+
+**Viewing lens**:
+A transient way of looking at a Component in the preview — the Theme Preset, device width, or Stage mode. A lens is never captured into a Variant, so any Variant can be viewed under any lens.
 
 ### Compose
 
