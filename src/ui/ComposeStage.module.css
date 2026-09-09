@@ -322,8 +322,8 @@
    one from looking at the gap it leaves. */
 .iconCapped,
 .iconCapped:hover {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--warn-soft);
+  color: var(--warn);
 }
 
 /* A span the page size is currently collapsing. Struck through rather than
@@ -335,7 +335,7 @@
 
 .remove:hover:not(:disabled) {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--danger);
 }
 
 /* --- empty page --- */
