@@ -20,6 +20,15 @@
         ],
         "createdAt": "2026-09-09T22:59:34.444Z",
         "reason": "DESIGN.md Shapes sanctions the CSS-triangle disclosure chevron (4px left-border wedge, rotates on open); .chevron is width:0/height:0 with transparent top/bottom borders in --text-faint (neutral, not accent) — a triangle glyph, not a card side-tab"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/ui/Sidebar.module.css"
+        ],
+        "createdAt": "2026-09-09T23:40:50.683Z",
+        "reason": "DESIGN.md Shapes sanctions the CSS-triangle disclosure chevron (4px left-border wedge, rotates on open); .chevron is width:0/height:0 with transparent top/bottom borders in --text-faint (neutral, not accent) — a triangle glyph, not a card side-tab"
       }
     ]
   }
