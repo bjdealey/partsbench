@@ -1,6 +1,6 @@
 # PartsBench
 
-**▶ Live demo: [bjdealey.github.io/component-playground](https://bjdealey.github.io/component-playground/)** — 110 example components, no install.
+**▶ Live demo: [bjdealey.github.io/partsbench](https://bjdealey.github.io/partsbench/)** — 110 example components, no install.
 
 A local, self-hosted playground for your own React components. Browse them in a
 gallery or sidebar, tweak their props through a live controls panel, watch the
