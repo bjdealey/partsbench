@@ -1,4 +1,5 @@
 .sidebar {
+  min-height: 0;
   border-right: 1px solid var(--border);
   background: var(--panel);
   overflow-y: auto;

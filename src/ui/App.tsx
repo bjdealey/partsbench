@@ -50,6 +50,7 @@ import Gallery from './Gallery'
 import PreviewStage, { type StageTheme } from './PreviewStage'
 import ContactSheet from './ContactSheet'
 import VariantsStrip from './VariantsStrip'
+import BlockOutline from './BlockOutline'
 import ComposeStage from './ComposeStage'
 import ThemePanel from './ThemePanel'
 import AddBlockDialog from './AddBlockDialog'
@@ -147,23 +148,26 @@ export default function App() {
   const isMobile = useMediaQuery('(max-width: 899px)')
   const [mobileTab, setMobileTab] = useState<MobileTab>('view')
 
-  // The component list is a slide-in drawer from the header hamburger on every
-  // width now — fully hidden by default so gallery and component get their full
-  // room, opened over the content when you reach for it. The controls still rise
-  // as a bottom sheet on a phone. Both are dismissible, neither is a docked pane.
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  // The left rail. On desktop it docks as a persistent column, open by default and
+  // collapsed from the header hamburger. On mobile it is an overlay drawer, hidden
+  // by default — so the initial value is "open on desktop, closed on mobile".
+  const [drawerOpen, setDrawerOpen] = useState(
+    () => !window.matchMedia('(max-width: 899px)').matches,
+  )
   const [mobileControlsOpen, setMobileControlsOpen] = useState(false)
 
-  // On a phone, drilling into a component is a fresh screen: close the list
+  // On a phone, drilling into a component is a fresh screen: close the overlay
   // drawer and the controls sheet whenever the shown component or the mode
-  // changes, so each lands clean rather than remembering the last overlay.
+  // changes. The desktop docked rail stays put — it is persistent, not an overlay.
   useEffect(() => {
-    setDrawerOpen(false)
-    setMobileControlsOpen(false)
+    if (isMobile) {
+      setDrawerOpen(false)
+      setMobileControlsOpen(false)
+    }
     // The contact sheet is a lens on the component in front of you; drop it when
     // that component or the mode changes so each lands on the single preview.
     setContact(false)
-  }, [selected, mode])
+  }, [selected, mode, isMobile])
 
   // Escape closes the list drawer, the way it dismisses any overlay.
   useEffect(() => {
@@ -799,11 +803,15 @@ export default function App() {
   const controlsOpen = isMobile && (composing ? activeTab === 'edit' : mobileControlsOpen)
   const rightHidden = !isMobile || controlsOpen ? '' : styles.paneHidden
 
-  // No docked component list any more — it overlays as a drawer — so component
-  // and compose share the same three regions: preview/canvas, splitter, controls.
+  // Unified shell: one grid for every mode. The left rail (component list, or the
+  // compose block outline) docks as the first column on desktop and collapses from
+  // the header hamburger. On mobile the rail keeps its overlay-drawer behaviour
+  // (the mobile IA is unified in a follow-up), so it is never a docked column there.
+  const RAIL_W = 232
+  const showRail = !isMobile && drawerOpen && !bare
   const columns = bare
     ? 'minmax(0, 1fr)'
-    : `minmax(0, 1fr) ${SPLITTER}px ${rightPane.size}px`
+    : `${showRail ? `${RAIL_W}px ` : ''}minmax(0, 1fr) ${SPLITTER}px ${rightPane.size}px`
 
   // In compose mode the controls panel follows the canvas selection, so with
   // nothing selected there is nothing to configure.
@@ -873,12 +881,12 @@ export default function App() {
     <div className={styles.app}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          {!composing && (
+          {!(isMobile && composing) && (
             <button
               type="button"
               className={styles.hamburger}
-              title={drawerOpen ? 'Hide the component list' : 'Show the component list'}
-              aria-label="Toggle the component list"
+              title={drawerOpen ? 'Hide the rail' : 'Show the rail'}
+              aria-label="Toggle the rail"
               aria-expanded={drawerOpen}
               onClick={() => setDrawerOpen((open) => !open)}
             >
@@ -915,7 +923,7 @@ export default function App() {
         <div className={styles.headerRight}>
           {/* The list is hidden by default, so a jump-to-a-component finder sits
               here in its place — only while the list is actually hidden. */}
-          {!isMobile && !composing && !drawerOpen && (
+          {!isMobile && !drawerOpen && (
             <HeaderSearch
               manifests={manifests}
               onSelect={(name) => {
@@ -951,7 +959,7 @@ export default function App() {
       {/* The component list, hidden by default on gallery and component, opened
           over the content as a left drawer from the header hamburger — the same
           overlay on every width now, not only the phone. Compose has no list. */}
-      {!composing && (
+      {isMobile && !composing && (
         <>
           <div
             className={`${styles.scrim} ${drawerOpen ? styles.scrimShown : ''}`}
@@ -977,18 +985,48 @@ export default function App() {
         </>
       )}
 
-      {mode === 'gallery' && manifests.length > 0 ? (
+      {manifests.length === 0 ? (
+        <div className={styles.empty}>
+          <h2 className={styles.emptyTitle}>No components registered</h2>
+          <p className={styles.emptyBody}>
+            Add a folder under <code>src/components/</code> containing a component
+            and a matching <code>*.manifest.ts</code> that default-exports its
+            manifest. The registry picks it up automatically.
+          </p>
+        </div>
+      ) : isMobile && mode === 'gallery' ? (
+        // Mobile keeps the standalone gallery for now; the mobile IA is unified next.
         <Gallery
           manifests={manifests}
           onOpen={openComponent}
           design={designActive ? theme : null}
           onRandomize={() => randomizeGlobalDesign(stageTheme)}
         />
-      ) : manifest && values ? (
+      ) : (
         <div
           className={styles.layout}
           style={{ gridTemplateColumns: columns }}
         >
+          {showRail &&
+            (composing ? (
+              <BlockOutline
+                composition={composition}
+                selectedId={selectedBlockId}
+                onSelect={setSelectedBlockId}
+                onAdd={() => setPicking(true)}
+              />
+            ) : (
+              <Sidebar
+                manifests={manifests}
+                selected={activeName}
+                onSelect={(name) => {
+                  setSelected(name)
+                  setMode('component')
+                }}
+                onStep={handleStep}
+              />
+            ))}
+
           <main className={styles.center}>
             {mobilePreview && (
               <div className={styles.mobileBar}>
@@ -1013,7 +1051,14 @@ export default function App() {
                 </button>
               </div>
             )}
-            {composing ? (
+            {mode === 'gallery' ? (
+              <Gallery
+                manifests={manifests}
+                onOpen={openComponent}
+                design={designActive ? theme : null}
+                onRandomize={() => randomizeGlobalDesign(stageTheme)}
+              />
+            ) : composing ? (
               <ComposeStage
                 composition={composition}
                 theme={theme}
@@ -1038,7 +1083,7 @@ export default function App() {
                 onSceneChange={handleSceneChange}
                 onPageChange={handlePageChange}
               />
-            ) : contact ? (
+            ) : contact && manifest && values ? (
               <ContactSheet
                 manifest={manifest}
                 values={values}
@@ -1049,7 +1094,7 @@ export default function App() {
                 }}
                 toolbar={lensToolbar}
               />
-            ) : (
+            ) : manifest && values ? (
               <PreviewStage
                 manifest={manifest}
                 values={shownValues ?? values}
@@ -1059,9 +1104,9 @@ export default function App() {
                 toolbar={lensToolbar}
                 width={previewWidth}
               />
-            )}
+            ) : null}
 
-            {!composing && (
+            {mode === 'component' && (
               <VariantsStrip
                 variants={variants}
                 activeId={activeVariantId}
@@ -1073,28 +1118,9 @@ export default function App() {
               />
             )}
 
-            {composing ? (
-              <div
-                className={`${styles.centerSecondary} ${
-                  controlsOpen ? styles.paneHidden : ''
-                }`}
-              >
-                <EventLog events={events} onClear={() => setEvents([])} />
-
-                <Splitter pane={codePane} label="Code panel height" />
-
-                <CodePanel
-                  height={codeHeight}
-                  snippets={pageSnippets}
-                  views={PAGE_VIEWS}
-                  includeDefaults={includeDefaults}
-                  onIncludeDefaultsChange={setIncludeDefaults}
-                  onNeedFull={() => setWantFull(true)}
-                />
-              </div>
-            ) : (
-              // Component mode: Code and Events collapse into one output drawer,
-              // closed by default so the preview leads.
+            {mode !== 'gallery' && (
+              // Component and Compose share one collapsible output drawer
+              // (Code · Events), closed by default so the preview/canvas leads.
               <div
                 className={`${styles.output} ${outputOpen ? styles.outputOpen : ''} ${
                   controlsOpen ? styles.paneHidden : ''
@@ -1155,8 +1181,8 @@ export default function App() {
                     <Splitter pane={codePane} label="Code panel height" />
                     <CodePanel
                       height={codeHeight}
-                      snippets={{ ...snippets, full }}
-                      views={COMPONENT_VIEWS}
+                      snippets={composing ? pageSnippets : { ...snippets, full }}
+                      views={composing ? PAGE_VIEWS : COMPONENT_VIEWS}
                       includeDefaults={includeDefaults}
                       onIncludeDefaultsChange={setIncludeDefaults}
                       onNeedFull={() => setWantFull(true)}
@@ -1177,6 +1203,26 @@ export default function App() {
 
           {!bare && (
           <div className={`${styles.right} ${rightHidden}`}>
+            {mode === 'gallery' ? (
+              <div className={styles.galleryTheme}>
+                <ThemePanel
+                  theme={theme}
+                  onChange={(next) => {
+                    setTheme(next)
+                    setDesignActive(true)
+                  }}
+                  onPresetPage={(background) =>
+                    setComposition((prev) => ({
+                      ...prev,
+                      page: { ...prev.page, background },
+                    }))
+                  }
+                  composition={composition}
+                  onRandomize={() => randomizeGlobalDesign(stageTheme)}
+                />
+              </div>
+            ) : (
+              <>
             {composing && (
               <>
                 <div className={styles.themeSlot} style={{ height: themePane.size }}>
@@ -1226,17 +1272,10 @@ export default function App() {
                 </p>
               </div>
             )}
+              </>
+            )}
           </div>
           )}
-        </div>
-      ) : (
-        <div className={styles.empty}>
-          <h2 className={styles.emptyTitle}>No components registered</h2>
-          <p className={styles.emptyBody}>
-            Add a folder under <code>src/components/</code> containing a component
-            and a matching <code>*.manifest.ts</code> that default-exports its
-            manifest. The registry picks it up automatically.
-          </p>
         </div>
       )}
 

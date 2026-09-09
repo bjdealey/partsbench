@@ -667,3 +667,10 @@
   overflow-y: auto;
   padding-bottom: 10px;
 }
+
+/* Gallery's right inspector holds the shared-theme editor; let it scroll. */
+.galleryTheme {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
