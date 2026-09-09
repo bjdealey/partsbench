@@ -35,12 +35,21 @@ import type {
   SlotValues,
 } from '../lib/types'
 import { SPLITTER, usePane } from '../lib/panes'
+import {
+  loadVariants,
+  saveVariant,
+  renameVariant,
+  deleteVariant,
+  nextVariantName,
+  type Variant,
+} from '../lib/variants'
 import Splitter from './Splitter'
 import Sidebar from './Sidebar'
 import HeaderSearch from './HeaderSearch'
 import Gallery from './Gallery'
 import PreviewStage, { type StageTheme } from './PreviewStage'
 import ContactSheet from './ContactSheet'
+import VariantsStrip from './VariantsStrip'
 import ComposeStage from './ComposeStage'
 import ThemePanel from './ThemePanel'
 import AddBlockDialog from './AddBlockDialog'
@@ -190,6 +199,11 @@ export default function App() {
   const [outputOpen, setOutputOpen] = useState(false)
   const [outputTab, setOutputTab] = useState<'code' | 'events'>('code')
 
+  // Saved Variants of the current component (localStorage), plus which one is
+  // applied so its chip can show its actions. Loaded per component below.
+  const [variants, setVariants] = useState<Variant[]>([])
+  const [activeVariantId, setActiveVariantId] = useState<string | null>(null)
+
   const [events, setEvents] = useState<LoggedEvent[]>([])
   const nextEventId = useRef(0)
 
@@ -222,6 +236,13 @@ export default function App() {
   useEffect(() => {
     setEvents([])
   }, [activeName, mode])
+
+  // Variants are per component; load the current one's set and drop any applied
+  // highlight when the component changes.
+  useEffect(() => {
+    setVariants(loadVariants(activeName))
+    setActiveVariantId(null)
+  }, [activeName])
 
   // Paint the whole workbench chrome in the site-wide light/dark: the toggle sets
   // data-theme on the root, and global.css swaps the chrome palette under it. The
@@ -545,6 +566,34 @@ export default function App() {
     setTheme(next)
     setDesignActive(true)
     setPresetName(name)
+  }
+
+  /**
+   * Save the component's current Values (props, children, slots, effects) as a
+   * named Variant. The viewing lenses — theme preset, device, light/dark — are
+   * deliberately not captured, so a Variant can be viewed under any of them.
+   */
+  function handleSaveVariant(name: string) {
+    if (!manifest || !values) return
+    const next = saveVariant(activeName, name, values)
+    setVariants(next)
+    setActiveVariantId(next[next.length - 1]?.id ?? null)
+  }
+
+  function handleApplyVariant(variant: Variant) {
+    // Clone so editing after applying can't mutate the saved snapshot.
+    const applied: PlaygroundValues = JSON.parse(JSON.stringify(variant.values))
+    setValuesByName((prev) => ({ ...prev, [activeName]: applied }))
+    setActiveVariantId(variant.id)
+  }
+
+  function handleRenameVariant(id: string, name: string) {
+    setVariants(renameVariant(activeName, id, name))
+  }
+
+  function handleDeleteVariant(variant: Variant) {
+    setVariants(deleteVariant(activeName, variant.id))
+    if (activeVariantId === variant.id) setActiveVariantId(null)
   }
 
   /**
@@ -1009,6 +1058,18 @@ export default function App() {
                 onEvent={handleEvent}
                 toolbar={lensToolbar}
                 width={previewWidth}
+              />
+            )}
+
+            {!composing && (
+              <VariantsStrip
+                variants={variants}
+                activeId={activeVariantId}
+                suggestedName={nextVariantName(variants)}
+                onApply={handleApplyVariant}
+                onSave={handleSaveVariant}
+                onRename={handleRenameVariant}
+                onDelete={handleDeleteVariant}
               />
             )}
 
