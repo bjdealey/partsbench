@@ -1,4 +1,4 @@
-# Component Playground
+# PartsBench
 
 **▶ Live demo: [bjdealey.github.io/component-playground](https://bjdealey.github.io/component-playground/)** — 110 example components, no install.
 
