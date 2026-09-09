@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import type { ComponentManifest, ControlValue, PlaygroundValues } from '../lib/types'
 import { pixelateSubtree, restorePixelArt, pixelCell, type Applied } from '../lib/pixelate'
 import { applyEffects, restoreEffects, hasEffects, type AppliedEffects } from '../lib/effects'
@@ -16,6 +16,10 @@ interface PreviewStageProps {
   onPropChange: (name: string, value: ControlValue) => void
   /** Called whenever a handler the playground supplied actually fires. */
   onEvent: EventReporter
+  /** Lens controls (preset, device, contact) shown in the preview toolbar. */
+  toolbar?: ReactNode
+  /** Cap the canvas to a device width; null/undefined lets it fill the stage. */
+  width?: number | null
 }
 
 export default function PreviewStage({
@@ -24,6 +28,8 @@ export default function PreviewStage({
   theme,
   onPropChange,
   onEvent,
+  toolbar,
+  width,
 }: PreviewStageProps) {
   // `values` already has the global design folded in (App passes the resolved
   // values), so this stage just renders and instruments what it is given.
@@ -92,10 +98,15 @@ export default function PreviewStage({
     <section className={styles.wrapper} aria-label="Preview">
       <div className={styles.toolbar}>
         <span className={styles.label}>Preview</span>
+        {toolbar}
       </div>
 
       <div className={styles.stage} data-theme={theme} ref={stageRef}>
-        <div ref={canvasRef} className={`${styles.canvas} ${pixel > 0 ? styles.pixelArt : ''}`}>
+        <div
+          ref={canvasRef}
+          className={`${styles.canvas} ${pixel > 0 ? styles.pixelArt : ''}`}
+          style={width ? { maxWidth: `${width}px` } : undefined}
+        >
           <PreviewBoundary resetKey={manifest.name} retryOn={values}>
             <ComponentRender
               manifest={manifest}

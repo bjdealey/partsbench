@@ -475,3 +475,195 @@
   font-size: 12.5px;
   color: var(--text);
 }
+
+/* --- component-mode preview lens toolbar (theme preset · device · contact) --- */
+
+.lens {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lensField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lensName {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.lensSelect {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+
+.lensSelect:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Segmented device switch — the same inset-track idiom as the header mode switch. */
+.lensDevices {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.lensDevice {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease);
+}
+
+.lensDevice:hover {
+  color: var(--text);
+}
+
+.lensDeviceActive,
+.lensDeviceActive:hover {
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 500;
+  box-shadow: var(--shadow-seated);
+}
+
+/* Secondary-button idiom, with the accent-soft selection ground when engaged. */
+.lensContact {
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
+    background-color var(--dur-1) var(--ease);
+}
+
+.lensContact:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.lensContactOn,
+.lensContactOn:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.lensContact:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* --- component-mode output drawer (Code · Events, collapsed by default) --- */
+
+.output {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.outputBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  padding: 0 12px 0 8px;
+}
+
+.outputTabs {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.outputTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+
+.outputTab:hover {
+  color: var(--text);
+}
+
+.outputTabActive,
+.outputTabActive:hover {
+  color: var(--text);
+  font-weight: 500;
+  border-bottom-color: var(--accent);
+}
+
+.outputBadge {
+  min-width: 16px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.outputToggle {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+
+.outputToggle:hover {
+  background: var(--panel-alt);
+  color: var(--text);
+}
+
+.outputEvents {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-bottom: 10px;
+}
