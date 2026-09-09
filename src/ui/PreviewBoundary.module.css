@@ -5,7 +5,7 @@
   gap: 10px;
   max-width: 460px;
   padding: 20px;
-  border: 1px solid #f1b4b4;
+  border: 1px solid var(--danger-soft);
   border-radius: 10px;
   background: #fef7f7;
   text-align: left;
@@ -15,7 +15,7 @@
 .badge {
   padding: 3px 8px;
   border-radius: 999px;
-  background: #dc2626;
+  background: var(--danger);
   color: #ffffff;
   font-size: 11px;
   font-weight: 600;
@@ -44,7 +44,7 @@
   overflow: auto;
   border-radius: 6px;
   background: #ffffff;
-  border: 1px solid #f1b4b4;
+  border: 1px solid var(--danger-soft);
   font-family: var(--mono);
   font-size: 12px;
   line-height: 1.55;
@@ -56,15 +56,15 @@
   margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
-  color: #9a6a6a;
+  color: var(--danger-muted);
 }
 
 .retry {
   padding: 7px 12px;
-  border: 1px solid #dc2626;
+  border: 1px solid var(--danger);
   border-radius: 6px;
   background: transparent;
-  color: #dc2626;
+  color: var(--danger);
   font-family: inherit;
   font-size: 12.5px;
   font-weight: 500;
@@ -72,6 +72,6 @@
 }
 
 .retry:hover {
-  background: #dc2626;
+  background: var(--danger);
   color: #ffffff;
 }

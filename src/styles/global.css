@@ -20,6 +20,15 @@
   --accent-soft-hover: #e6ebfe;
   --radius: 8px;
 
+  /* Status palette (DESIGN.md). Feedback only — never surfaces or brand. Single
+     values, the same in light and dark, so they are not overridden below. */
+  --danger: #dc2626;
+  --danger-soft: #f1b4b4;
+  --danger-muted: #9a6a6a;
+  --success: #15803d;
+  --warn: #b45309;
+  --warn-soft: #fef3c7;
+
   --stage-light: #ffffff;
   --stage-dark: #17181c;
 

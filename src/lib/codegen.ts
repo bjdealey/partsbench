@@ -150,16 +150,7 @@ export function generateJSX(
 
   if (!body) return `${opening}${attributes.length > 0 ? '/>' : ' />'}`
 
-  const closing = attributes.length > 0 ? '>' : '>'
-  return `${opening}${closing}\n${indentLines(body, 2)}\n</${name}>`
-}
-
-function indent(block: string, spaces: number): string {
-  const pad = ' '.repeat(spaces)
-  return block
-    .split('\n')
-    .map((line) => (line.length > 0 ? pad + line : line))
-    .join('\n')
+  return `${opening}>\n${indentLines(body, 2)}\n</${name}>`
 }
 
 /** Every component named in the snippet: the component itself plus its slots. */
@@ -229,7 +220,7 @@ export function generateUsage(
     'export default function Example() {',
     ...handlers,
     '  return (',
-    indent(generateJSX(manifest, values, options), 4),
+    indentLines(generateJSX(manifest, values, options), 4),
     '  )',
     '}',
     '',

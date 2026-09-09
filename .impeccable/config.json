@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "src/ui/ComposeStage.module.css"
+        ],
+        "createdAt": "2026-09-09T21:34:19.486Z",
+        "reason": "author in-code rationale (ComposeStage.module.css:137-141): width tween is a one-off at device-size-switch click frequency; transform/scaleX would squash page contents, so the honest resize is the width transition"
+      }
+    ]
+  }
+}

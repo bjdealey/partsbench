@@ -1,5 +1,6 @@
 import type { Control, PropValues } from './types'
 import { pixelCell } from './pixelate'
+import { parseHex } from './color'
 
 /**
  * A component-level "Effects" layer — elevation shadow, top highlight, colour
@@ -61,11 +62,9 @@ export function hasEffects(e: PropValues | undefined): boolean {
 
 /** #rgb / #rrggbb → rgba() at the given alpha. Falls back to a neutral tint. */
 function rgba(hex: string, alpha: number): string {
-  let h = hex.trim().replace(/^#/, '')
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('')
-  const n = Number.parseInt(h, 16)
-  if (h.length !== 6 || Number.isNaN(n)) return `rgba(79, 70, 229, ${alpha})`
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
+  const parsed = parseHex(hex)
+  if (!parsed) return `rgba(79, 70, 229, ${alpha})`
+  return `rgba(${parsed.r}, ${parsed.g}, ${parsed.b}, ${alpha})`
 }
 
 /** Two-layer elevation shadow, tighter over softer, that follows the silhouette. */
