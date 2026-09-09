@@ -65,7 +65,7 @@
   border: 1px solid var(--border);
   border-radius: 5px;
   background: var(--panel);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+  box-shadow: var(--shadow-pop);
   font-family: var(--mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
