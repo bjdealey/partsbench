@@ -12,6 +12,7 @@ import {
   createBlock,
   pruneBlocks,
   updateBlock,
+  DEVICES,
 } from '../lib/composition'
 import { DEFAULT_SCENE, buildScene, sceneByName } from '../lib/scenes'
 import { generatePage, generateTokens } from '../lib/compositionCodegen'
@@ -20,6 +21,9 @@ import {
   defaultTheme,
   ownsShadow,
   withMode,
+  themeFromPreset,
+  THEME_PRESETS,
+  ALL_ON,
   type Theme,
 } from '../lib/theme'
 import { effectsFor, pageFor } from '../lib/designSystem'
@@ -36,6 +40,7 @@ import Sidebar from './Sidebar'
 import HeaderSearch from './HeaderSearch'
 import Gallery from './Gallery'
 import PreviewStage, { type StageTheme } from './PreviewStage'
+import ContactSheet from './ContactSheet'
 import ComposeStage from './ComposeStage'
 import ThemePanel from './ThemePanel'
 import AddBlockDialog from './AddBlockDialog'
@@ -146,6 +151,9 @@ export default function App() {
   useEffect(() => {
     setDrawerOpen(false)
     setMobileControlsOpen(false)
+    // The contact sheet is a lens on the component in front of you; drop it when
+    // that component or the mode changes so each lands on the single preview.
+    setContact(false)
   }, [selected, mode])
 
   // Escape closes the list drawer, the way it dismisses any overlay.
@@ -166,6 +174,21 @@ export default function App() {
    * 344px panel would be taking back most of what the Mobile button just gave.
    */
   const [interactive, setInteractive] = useState(false)
+
+  // --- component-mode view lenses (declutter + visualize) ---
+  // A theme Preset folded onto the single-component preview. Compose owns the
+  // full per-token panel; component mode gets just the picker. null = the
+  // component's own manifest values, no design applied.
+  const [presetName, setPresetName] = useState<string | null>(null)
+  // A device width to preview at, or null to fill the stage. Reuses the compose
+  // device presets, so both surfaces test at the same sizes.
+  const [deviceId, setDeviceId] = useState<string | null>(null)
+  // The "see it across every theme" grid, shown in place of the single preview.
+  const [contact, setContact] = useState(false)
+  // Code and Events live in a collapsible output drawer below the preview, closed
+  // by default so the preview is the star rather than one panel among many.
+  const [outputOpen, setOutputOpen] = useState(false)
+  const [outputTab, setOutputTab] = useState<'code' | 'events'>('code')
 
   const [events, setEvents] = useState<LoggedEvent[]>([])
   const nextEventId = useRef(0)
@@ -439,6 +462,7 @@ export default function App() {
     // land on the plain manifest values rather than defaults under a design whose
     // controls aren't in front of you. Randomise (global on) ↔ Reset (global off).
     setDesignActive(false)
+    setPresetName(null)
     setValuesByName((prev) => ({
       ...prev,
       [manifest.name]: defaultValues(manifest),
@@ -456,6 +480,8 @@ export default function App() {
     setTheme(next)
     setComposition((prev) => ({ ...prev, page: { ...prev.page, background: page } }))
     setDesignActive(true)
+    // A reroll is a design of its own, not one of the named presets.
+    setPresetName(null)
 
     // Component mode draws no theme envelope, so a design's elevation, gradient
     // and highlight reach the preview through the per-component Effects layer.
@@ -499,6 +525,26 @@ export default function App() {
         page: { ...prev.page, background: flipped.page },
       }))
     }
+  }
+
+  /**
+   * Apply a theme Preset to the single-component preview, or clear it. Reuses the
+   * same path Randomise uses (a shared theme + designActive), so the preview and
+   * the generated code stay in agreement — the Preset is a viewing lens, not part
+   * of the component's own values.
+   */
+  function applyPreset(name: string | null) {
+    if (!name) {
+      setDesignActive(false)
+      setPresetName(null)
+      return
+    }
+    const preset = THEME_PRESETS.find((entry) => entry.name === name)
+    if (!preset) return
+    const { theme: next } = themeFromPreset(preset, stageTheme, ALL_ON)
+    setTheme(next)
+    setDesignActive(true)
+    setPresetName(name)
   }
 
   /**
@@ -715,6 +761,65 @@ export default function App() {
   const panelManifest = composing ? selectedBlockManifest : manifest
   const panelValues = composing ? selectedBlock?.values : values
 
+  // --- component-mode view lenses ---
+  const device = deviceId ? DEVICES.find((entry) => entry.id === deviceId) ?? null : null
+  const previewWidth = device?.width ?? null
+  const eventTotal = events.reduce((sum, entry) => sum + entry.count, 0)
+  // A named preset, or "Custom" when a reroll left a design active that matches
+  // no preset, or empty for the component's own defaults.
+  const presetValue = presetName ?? (designActive ? '__custom' : '')
+
+  const lensToolbar = (
+    <div className={styles.lens}>
+      <label className={styles.lensField}>
+        <span className={styles.lensName}>Theme</span>
+        <select
+          className={styles.lensSelect}
+          value={presetValue}
+          onChange={(event) =>
+            applyPreset(event.target.value === '__custom' ? presetName : event.target.value || null)
+          }
+        >
+          <option value="">Default</option>
+          <option value="__custom" disabled hidden>
+            Custom
+          </option>
+          {THEME_PRESETS.map((preset) => (
+            <option key={preset.name} value={preset.name}>
+              {preset.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className={styles.lensDevices} role="group" aria-label="Preview width">
+        {[{ id: null as string | null, label: 'Fit' }, ...DEVICES.map((entry) => ({ id: entry.id, label: entry.label }))].map(
+          (option) => (
+            <button
+              key={option.id ?? 'fit'}
+              type="button"
+              className={`${styles.lensDevice} ${deviceId === option.id ? styles.lensDeviceActive : ''}`}
+              aria-pressed={deviceId === option.id}
+              onClick={() => setDeviceId(option.id)}
+            >
+              {option.label}
+            </button>
+          ),
+        )}
+      </div>
+
+      <button
+        type="button"
+        className={`${styles.lensContact} ${contact ? styles.lensContactOn : ''}`}
+        aria-pressed={contact}
+        title="See the component across every theme"
+        onClick={() => setContact((on) => !on)}
+      >
+        Contact sheet
+      </button>
+    </div>
+  )
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
@@ -884,6 +989,17 @@ export default function App() {
                 onSceneChange={handleSceneChange}
                 onPageChange={handlePageChange}
               />
+            ) : contact ? (
+              <ContactSheet
+                manifest={manifest}
+                values={values}
+                theme={stageTheme}
+                onPick={(name) => {
+                  applyPreset(name)
+                  setContact(false)
+                }}
+                toolbar={lensToolbar}
+              />
             ) : (
               <PreviewStage
                 manifest={manifest}
@@ -891,27 +1007,109 @@ export default function App() {
                 theme={stageTheme}
                 onPropChange={handlePropChange}
                 onEvent={handleEvent}
+                toolbar={lensToolbar}
+                width={previewWidth}
               />
             )}
 
-            <div
-              className={`${styles.centerSecondary} ${
-                controlsOpen ? styles.paneHidden : ''
-              }`}
-            >
-              <EventLog events={events} onClear={() => setEvents([])} />
+            {composing ? (
+              <div
+                className={`${styles.centerSecondary} ${
+                  controlsOpen ? styles.paneHidden : ''
+                }`}
+              >
+                <EventLog events={events} onClear={() => setEvents([])} />
 
-              <Splitter pane={codePane} label="Code panel height" />
+                <Splitter pane={codePane} label="Code panel height" />
 
-              <CodePanel
-                height={codeHeight}
-                snippets={composing ? pageSnippets : { ...snippets, full }}
-                views={composing ? PAGE_VIEWS : COMPONENT_VIEWS}
-                includeDefaults={includeDefaults}
-                onIncludeDefaultsChange={setIncludeDefaults}
-                onNeedFull={() => setWantFull(true)}
-              />
-            </div>
+                <CodePanel
+                  height={codeHeight}
+                  snippets={pageSnippets}
+                  views={PAGE_VIEWS}
+                  includeDefaults={includeDefaults}
+                  onIncludeDefaultsChange={setIncludeDefaults}
+                  onNeedFull={() => setWantFull(true)}
+                />
+              </div>
+            ) : (
+              // Component mode: Code and Events collapse into one output drawer,
+              // closed by default so the preview leads.
+              <div
+                className={`${styles.output} ${outputOpen ? styles.outputOpen : ''} ${
+                  controlsOpen ? styles.paneHidden : ''
+                }`}
+              >
+                <div className={styles.outputBar}>
+                  <div className={styles.outputTabs} role="tablist" aria-label="Output">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={outputOpen && outputTab === 'code'}
+                      className={`${styles.outputTab} ${
+                        outputOpen && outputTab === 'code' ? styles.outputTabActive : ''
+                      }`}
+                      onClick={() => {
+                        if (outputOpen && outputTab === 'code') setOutputOpen(false)
+                        else {
+                          setOutputTab('code')
+                          setOutputOpen(true)
+                        }
+                      }}
+                    >
+                      Code
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={outputOpen && outputTab === 'events'}
+                      className={`${styles.outputTab} ${
+                        outputOpen && outputTab === 'events' ? styles.outputTabActive : ''
+                      }`}
+                      onClick={() => {
+                        if (outputOpen && outputTab === 'events') setOutputOpen(false)
+                        else {
+                          setOutputTab('events')
+                          setOutputOpen(true)
+                        }
+                      }}
+                    >
+                      Events
+                      {eventTotal > 0 && (
+                        <span className={styles.outputBadge}>{eventTotal}</span>
+                      )}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.outputToggle}
+                    aria-expanded={outputOpen}
+                    onClick={() => setOutputOpen((open) => !open)}
+                  >
+                    {outputOpen ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+
+                {outputOpen && outputTab === 'code' && (
+                  <>
+                    <Splitter pane={codePane} label="Code panel height" />
+                    <CodePanel
+                      height={codeHeight}
+                      snippets={{ ...snippets, full }}
+                      views={COMPONENT_VIEWS}
+                      includeDefaults={includeDefaults}
+                      onIncludeDefaultsChange={setIncludeDefaults}
+                      onNeedFull={() => setWantFull(true)}
+                    />
+                  </>
+                )}
+
+                {outputOpen && outputTab === 'events' && (
+                  <div className={styles.outputEvents}>
+                    <EventLog events={events} onClear={() => setEvents([])} embedded />
+                  </div>
+                )}
+              </div>
+            )}
           </main>
 
           {!bare && <Splitter pane={rightPane} label="Controls panel width" />}
