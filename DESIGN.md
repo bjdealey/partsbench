@@ -1,5 +1,5 @@
 ---
-name: Component Playground
+name: PartsBench
 description: The neutral workbench chrome that holds your React components — grayscale, precise, indigo-accented.
 colors:
   accent: "#4f46e5"
@@ -114,13 +114,13 @@ components:
     rounded: "{rounded.md}"
 ---
 
-# Design System: Component Playground
+# Design System: PartsBench
 
 ## Overview
 
 **Creative North Star: "The Workbench"**
 
-The Component Playground is a workbench, not a showroom. Tools are laid out
+PartsBench is a workbench, not a showroom. Tools are laid out
 cleanly along the edges — a sidebar of components, a controls panel, a theme
 rig, a code readout — and the work itself is clamped in the middle, lit evenly,
 with nothing around it competing for the eye. The chrome is quiet on purpose:

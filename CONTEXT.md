@@ -1,4 +1,4 @@
-# Component Playground
+# PartsBench
 
 A local, single-user workbench for the owner's own React component library: browse components, tweak their props through declared controls, preview live, and compose pages of components under one shared design system.
 

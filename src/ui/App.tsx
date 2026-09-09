@@ -732,7 +732,7 @@ export default function App() {
             </button>
           )}
           <span className={styles.mark} aria-hidden="true" />
-          <h1 className={styles.title}>Component Playground</h1>
+          <h1 className={styles.title}>PartsBench</h1>
           <button
             type="button"
             className={styles.command}

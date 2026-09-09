@@ -1,4 +1,4 @@
-# component-playground
+# PartsBench
 
 ## Agent skills
 

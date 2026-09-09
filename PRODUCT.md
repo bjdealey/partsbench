@@ -89,7 +89,7 @@ the mechanism is the core to preserve):
 
 ## Brand Commitments
 
-- **Name:** Component Playground.
+- **Name:** PartsBench.
 - **Voice (incumbent, observed — preserve rather than reinvent):** the README,
   code comments, and UI microcopy share a terse, precise, rationale-first voice
   that states the *why* behind a choice ("Ninety-plus components in one
