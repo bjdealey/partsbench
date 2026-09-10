@@ -149,6 +149,16 @@
   align-items: start;
 }
 
+/* Slice D: where a dragged library component will land. A full-width rule so the
+   insertion point reads clearly between rows. */
+.dropIndicator {
+  grid-column: 1 / -1;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
 /* --- blocks --- */
 
 .block {

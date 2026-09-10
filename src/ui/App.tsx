@@ -9,6 +9,7 @@ import { appendEvent, eventTime, type LoggedEvent } from '../lib/eventLog'
 import type { Composition, PageSettings } from '../lib/composition'
 import {
   addBlock,
+  addNodeAt,
   createBlock,
   findComponentNode,
   pruneBlocks,
@@ -706,6 +707,19 @@ export default function App() {
     setSelectedBlockId(block.id)
   }
 
+  /** Slice D: a library component dragged onto the canvas lands at `index`. */
+  function handleDropComponent(name: string, index: number) {
+    const picked = getManifest(name)
+    if (!picked) return
+    const block = createBlock(picked, { component: name, span: 12 })
+    setComposition((prev) => ({
+      ...addNodeAt(prev, block, index),
+      name: sceneByName(prev.name) ? `${prev.name} (edited)` : prev.name,
+    }))
+    setSelectedBlockId(block.id)
+    setFocusOpen(false)
+  }
+
   /* ---------------- panes ---------------- */
 
   // Ceilings are read off the window rather than measured from the DOM: these
@@ -986,6 +1000,7 @@ export default function App() {
                 onAdd={() => setPicking(true)}
                 onSceneChange={handleSceneChange}
                 onPageChange={handlePageChange}
+                onDropComponent={handleDropComponent}
               />
             ) : contact && manifest && values ? (
               <ContactSheet

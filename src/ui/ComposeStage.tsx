@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Composition, ComponentNode, Node } from '../lib/composition'
 import {
   COLUMNS,
+  COMPONENT_DND_MIME,
   DEVICES,
   SPAN_PRESETS,
   activeDevice,
@@ -108,6 +109,8 @@ interface ComposeStageProps {
   onAdd: () => void
   onSceneChange: (name: string) => void
   onPageChange: (page: Composition['page']) => void
+  /** Drop a library component onto the canvas at a top-level index (Slice D). */
+  onDropComponent: (name: string, index: number) => void
 }
 
 export default function ComposeStage({
@@ -124,6 +127,7 @@ export default function ComposeStage({
   onAdd,
   onSceneChange,
   onPageChange,
+  onDropComponent,
 }: ComposeStageProps) {
   const { root } = composition
   // The padding and gap tokens reach the page itself, so everything that
@@ -137,6 +141,9 @@ export default function ComposeStage({
   const [undo, setUndo] = useState<{ composition: Composition; label: string } | null>(
     null,
   )
+  // Slice D: where a dragged library component would land, as a top-level index —
+  // null when nothing is being dragged over the canvas.
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
   const undoTimer = useRef<number | null>(null)
   const undoButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -218,6 +225,54 @@ export default function ComposeStage({
         />
       ),
     )
+  }
+
+  // --- drag-to-place (Slice D) -----------------------------------------------
+  // A component dragged from the Library drops onto the grid at the indicator.
+  // Reorder and resize-by-drag are the remainder of Slice D.
+  function dropIndexFrom(event: React.DragEvent, grid: Element | null): number {
+    const items = grid
+      ? Array.from(grid.children).filter((el) => el.hasAttribute('data-compose-block'))
+      : []
+    const { clientX: x, clientY: y } = event
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i].getBoundingClientRect()
+      const after = y > r.bottom || (y >= r.top && x > r.left + r.width / 2)
+      if (!after) return i
+    }
+    return items.length
+  }
+
+  function handleDragOver(event: React.DragEvent) {
+    if (!event.dataTransfer.types.includes(COMPONENT_DND_MIME)) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+    setDropIndex(dropIndexFrom(event, event.currentTarget.querySelector('[data-compose-grid]')))
+  }
+
+  function handleDragLeave(event: React.DragEvent) {
+    // Ignore crossings between children; only clear when the pointer truly leaves.
+    if (event.currentTarget.contains(event.relatedTarget as HTMLElement | null)) return
+    setDropIndex(null)
+  }
+
+  function handleDrop(event: React.DragEvent) {
+    if (!event.dataTransfer.types.includes(COMPONENT_DND_MIME)) return
+    event.preventDefault()
+    const name =
+      event.dataTransfer.getData(COMPONENT_DND_MIME) || event.dataTransfer.getData('text/plain')
+    const index = dropIndex ?? root.length
+    setDropIndex(null)
+    if (name) onDropComponent(name, index)
+  }
+
+  function withDropIndicator(children: React.ReactNode): React.ReactNode {
+    if (dropIndex === null) return children
+    const list = Array.isArray(children) ? [...children] : [children]
+    list.splice(Math.min(dropIndex, list.length), 0, (
+      <div key="__drop" className={styles.dropIndicator} aria-hidden="true" />
+    ))
+    return list
   }
 
   return (
@@ -340,12 +395,15 @@ export default function ComposeStage({
             padding: page.padding,
             background: page.background,
           }}
+          onDragOver={interactive ? undefined : handleDragOver}
+          onDragLeave={interactive ? undefined : handleDragLeave}
+          onDrop={interactive ? undefined : handleDrop}
         >
-          {root.length === 0 ? (
+          {root.length === 0 && dropIndex === null ? (
             <div className={styles.empty}>
               <p className={styles.emptyTitle}>Nothing on the page yet</p>
               <p className={styles.emptyBody}>
-                Add a component, or pick a scene above to start from a built page.
+                Drag a component from the Library, add one, or pick a scene above.
               </p>
               <button
                 type="button"
@@ -361,9 +419,10 @@ export default function ComposeStage({
           ) : (
             <div
               className={styles.grid}
+              data-compose-grid=""
               style={{ gap: page.gap, gridTemplateColumns: `repeat(${COLUMNS}, 1fr)` }}
             >
-              {renderNodes(root)}
+              {withDropIndicator(renderNodes(root))}
             </div>
           )}
         </div>

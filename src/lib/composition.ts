@@ -378,6 +378,13 @@ export function cellWidth(page: PageSettings, span: number): number {
  * Edits. All pure — the caller holds the state.
  * ------------------------------------------------------------------ */
 
+/**
+ * The drag-and-drop payload type carrying a library component's manifest name
+ * from the rail onto the canvas (Slice D). A custom MIME so a component drag is
+ * never confused with a plain-text one.
+ */
+export const COMPONENT_DND_MIME = 'application/x-partsbench-component'
+
 export function addBlock(
   composition: Composition,
   block: Node,
@@ -390,6 +397,13 @@ export function addBlock(
   if (index === -1) root.push(block)
   else root.splice(index + 1, 0, block)
 
+  return { ...composition, root }
+}
+
+/** Inserts a node at a top-level index (Slice D drag-to-place). The index is clamped. */
+export function addNodeAt(composition: Composition, node: Node, index: number): Composition {
+  const root = [...composition.root]
+  root.splice(Math.max(0, Math.min(root.length, index)), 0, node)
   return { ...composition, root }
 }
 
