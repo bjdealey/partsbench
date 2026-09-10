@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Composition, CompositionBlock } from '../lib/composition'
+import type { Composition, ComponentNode, Node } from '../lib/composition'
 import {
   COLUMNS,
   DEVICES,
@@ -77,6 +77,14 @@ const RemoveIcon = () => (
   </svg>
 )
 
+/** A container's cross-axis alignment, mapped to the flexbox keyword. */
+const ALIGN: Record<string, string> = {
+  start: 'flex-start',
+  center: 'center',
+  end: 'flex-end',
+  stretch: 'stretch',
+}
+
 interface ComposeStageProps {
   composition: Composition
   /** Null when every token is switched off — blocks render their own values. */
@@ -117,7 +125,7 @@ export default function ComposeStage({
   onSceneChange,
   onPageChange,
 }: ComposeStageProps) {
-  const { blocks } = composition
+  const { root } = composition
   // The padding and gap tokens reach the page itself, so everything that
   // measures or paints it works from the scaled copy.
   const page = effectivePage(composition.page, theme)
@@ -167,6 +175,50 @@ export default function ComposeStage({
     // A stale undo from the previous scene would restore the wrong page.
     setUndo(null)
   }, [composition.name])
+
+  // Walk the node tree. Slice B: a flat page renders exactly as it always has;
+  // a container — none exist until Slice E gives them a create/edit UI — lays
+  // its children out as a stack. `index`/`total` are per sibling list, so the
+  // Move up/down chrome stays correct at every level.
+  function renderNodes(nodes: Node[]): React.ReactNode {
+    return nodes.map((node, index) =>
+      node.kind === 'container' ? (
+        <div
+          key={node.id}
+          data-compose-block=""
+          style={{
+            gridColumn: `span ${effectiveSpan(page, node.span)}`,
+            gridRow:
+              node.rowSpan > 1 ? `span ${effectiveRowSpan(page, node.rowSpan)}` : undefined,
+            display: 'flex',
+            flexDirection: node.direction === 'row' ? 'row' : 'column',
+            gap: node.gap,
+            alignItems: ALIGN[node.align],
+            padding: node.padding,
+          }}
+        >
+          {renderNodes(node.children)}
+        </div>
+      ) : (
+        <Block
+          key={node.id}
+          block={node}
+          index={index}
+          total={nodes.length}
+          composition={composition}
+          theme={theme}
+          interactive={interactive}
+          selected={node.id === selectedId}
+          onSelect={onSelect}
+          onChange={onChange}
+          onSelectAndChange={onSelectAndChange}
+          onEvent={onEvent}
+          onBlockPropChange={onBlockPropChange}
+          onRemove={handleRemove}
+        />
+      ),
+    )
+  }
 
   return (
     <section className={styles.wrapper} aria-label="Composition">
@@ -289,7 +341,7 @@ export default function ComposeStage({
             background: page.background,
           }}
         >
-          {blocks.length === 0 ? (
+          {root.length === 0 ? (
             <div className={styles.empty}>
               <p className={styles.emptyTitle}>Nothing on the page yet</p>
               <p className={styles.emptyBody}>
@@ -311,24 +363,7 @@ export default function ComposeStage({
               className={styles.grid}
               style={{ gap: page.gap, gridTemplateColumns: `repeat(${COLUMNS}, 1fr)` }}
             >
-              {blocks.map((block, index) => (
-                <Block
-                  key={block.id}
-                  block={block}
-                  index={index}
-                  total={blocks.length}
-                  composition={composition}
-                  theme={theme}
-                  interactive={interactive}
-                  selected={block.id === selectedId}
-                  onSelect={onSelect}
-                  onChange={onChange}
-                  onSelectAndChange={onSelectAndChange}
-                  onEvent={onEvent}
-                  onBlockPropChange={onBlockPropChange}
-                  onRemove={handleRemove}
-                />
-              ))}
+              {renderNodes(root)}
             </div>
           )}
         </div>
@@ -402,7 +437,7 @@ function BlockSurface({ component, values, theme, children }: BlockSurfaceProps)
 }
 
 interface BlockProps {
-  block: CompositionBlock
+  block: ComponentNode
   index: number
   total: number
   composition: Composition

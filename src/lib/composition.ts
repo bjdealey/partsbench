@@ -14,15 +14,18 @@ import { getManifest } from './registry'
 /** The grid is twelve columns, so halves, thirds and quarters all land clean. */
 export const COLUMNS = 12
 
-export interface CompositionBlock {
-  id: string
-  /** Manifest name. A block whose component has since been removed is dropped. */
-  component: string
-  values: PlaygroundValues
+export type NodeId = string
+
+/**
+ * How a node sits on its parent's twelve-column grid. Shared by every node kind
+ * so the renderer, codegen and serializer can place a container exactly the way
+ * they place a component.
+ */
+interface NodePlacement {
   /** Columns spanned, 1–12. */
   span: number
   /**
-   * Rows spanned. Only interesting for a block that should sit beside a stack of
+   * Rows spanned. Only interesting for a node that should sit beside a stack of
    * others — a nav rail down the left of a settings page — which auto-placement
    * gives you for free once the rail is told it is three rows tall.
    */
@@ -34,9 +37,43 @@ export interface CompositionBlock {
    * one from a half to a third would leave it the old size with a gap beside it.
    * Components cap their width — `DataTable` stops at 660 — so the fitted value
    * is clamped to whatever the control declared and simply stops growing.
+   * (A container ignores it — it sizes to its own stack.)
    */
   fit: boolean
 }
+
+/** A placed component: the leaf of the tree, and what a "block" has always been. */
+export interface ComponentNode extends NodePlacement {
+  kind: 'component'
+  id: NodeId
+  /** Manifest name. A node whose component has since been removed is dropped. */
+  component: string
+  values: PlaygroundValues
+}
+
+/**
+ * A layout container: its children lay out as a vertical or horizontal stack
+ * (stacks, not nested grids). Introduced by Slice B as the branch of the node
+ * tree; the UI to create and edit one lands in Slice E, so nothing constructs
+ * one yet — the type and its rendering exist so the tree is complete.
+ */
+export interface ContainerNode extends NodePlacement {
+  kind: 'container'
+  id: NodeId
+  direction: 'row' | 'column'
+  gap: number
+  align: 'start' | 'center' | 'end' | 'stretch'
+  padding: number
+  children: Node[]
+}
+
+export type Node = ComponentNode | ContainerNode
+
+/**
+ * @deprecated The old name for a leaf node, kept so existing imports keep
+ * compiling while the tree model beds in. Prefer {@link ComponentNode}.
+ */
+export type CompositionBlock = ComponentNode
 
 export interface PageSettings {
   /** Behind the blocks — the theme's page color, or a scene's own. */
@@ -143,7 +180,12 @@ export interface Composition {
   /** The scene this started from, shown in the toolbar. */
   name: string
   page: PageSettings
-  blocks: CompositionBlock[]
+  /**
+   * The page as a tree of nodes on the twelve-column grid. Today every node is
+   * a {@link ComponentNode} — a one-level grid, i.e. the old flat block list;
+   * {@link ContainerNode}s add nesting. See docs/design/unified-workbench.md.
+   */
+  root: Node[]
 }
 
 /**
@@ -187,7 +229,7 @@ export interface BlockSpec {
 export function createBlock(
   manifest: ComponentManifest,
   spec: BlockSpec = { component: manifest.name },
-): CompositionBlock {
+): ComponentNode {
   const values = defaultValues(manifest)
 
   // Only keys the manifest still declares are applied, so a scene written
@@ -208,6 +250,7 @@ export function createBlock(
   }
 
   return {
+    kind: 'component',
     id: blockId(),
     component: manifest.name,
     values,
@@ -216,6 +259,80 @@ export function createBlock(
     // A scene that pinned a width meant it; anything else fits its cell.
     fit: !(spec.props && 'width' in spec.props),
   }
+}
+
+/** Container defaults — one place so the factory and Slice E's UI agree. */
+export function createContainer(children: Node[] = [], span: number = COLUMNS): ContainerNode {
+  return {
+    kind: 'container',
+    id: blockId(),
+    direction: 'column',
+    gap: 12,
+    align: 'stretch',
+    padding: 0,
+    span: Math.min(COLUMNS, Math.max(1, span)),
+    rowSpan: 1,
+    fit: false,
+    children,
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Tree walking. The edit helpers below keep the flat-list behaviour
+ * for top-level structural moves (add / move / duplicate stay at the
+ * root until Slice E teaches them to drop into a container); the
+ * in-place mutators (update / patch / remove) already descend, so a
+ * selected node deep in a container edits correctly.
+ * ------------------------------------------------------------------ */
+
+/** Every ComponentNode in the tree, depth-first — most consumers only want leaves. */
+export function componentNodes(nodes: Node[]): ComponentNode[] {
+  const out: ComponentNode[] = []
+  for (const node of nodes) {
+    if (node.kind === 'component') out.push(node)
+    else out.push(...componentNodes(node.children))
+  }
+  return out
+}
+
+/** The node with this id, anywhere in the tree, or null. */
+export function findNode(nodes: Node[], id: string): Node | null {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    if (node.kind === 'container') {
+      const found = findNode(node.children, id)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+/** Like {@link findNode}, but only returns a leaf — what the controls panel edits. */
+export function findComponentNode(nodes: Node[], id: string): ComponentNode | null {
+  const node = findNode(nodes, id)
+  return node && node.kind === 'component' ? node : null
+}
+
+/** Replaces the node with this id, at any depth, leaving the rest untouched. */
+function updateNode(nodes: Node[], id: string, fn: (node: Node) => Node): Node[] {
+  return nodes.map((node) => {
+    if (node.id === id) return fn(node)
+    if (node.kind === 'container') {
+      const children = updateNode(node.children, id, fn)
+      return children === node.children ? node : { ...node, children }
+    }
+    return node
+  })
+}
+
+/** Drops the node with this id, at any depth. */
+function removeNode(nodes: Node[], id: string): Node[] {
+  const out: Node[] = []
+  for (const node of nodes) {
+    if (node.id === id) continue
+    out.push(node.kind === 'container' ? { ...node, children: removeNode(node.children, id) } : node)
+  }
+  return out
 }
 
 /**
@@ -263,41 +380,39 @@ export function cellWidth(page: PageSettings, span: number): number {
 
 export function addBlock(
   composition: Composition,
-  block: CompositionBlock,
+  block: Node,
   after?: string,
 ): Composition {
-  const blocks = [...composition.blocks]
-  const index = after ? blocks.findIndex((entry) => entry.id === after) : -1
+  // Slice B: nodes are added at the top level. Dropping into a container is Slice E.
+  const root = [...composition.root]
+  const index = after ? root.findIndex((entry) => entry.id === after) : -1
 
-  if (index === -1) blocks.push(block)
-  else blocks.splice(index + 1, 0, block)
+  if (index === -1) root.push(block)
+  else root.splice(index + 1, 0, block)
 
-  return { ...composition, blocks }
+  return { ...composition, root }
 }
 
 export function removeBlock(composition: Composition, id: string): Composition {
-  return {
-    ...composition,
-    blocks: composition.blocks.filter((block) => block.id !== id),
-  }
+  return { ...composition, root: removeNode(composition.root, id) }
 }
 
-/** Moves a block one position, clamped — the ends are not wrapped around. */
+/** Moves a top-level node one position, clamped — the ends are not wrapped around. */
 export function moveBlock(
   composition: Composition,
   id: string,
   delta: number,
 ): Composition {
-  const blocks = [...composition.blocks]
-  const from = blocks.findIndex((block) => block.id === id)
+  const root = [...composition.root]
+  const from = root.findIndex((node) => node.id === id)
   if (from === -1) return composition
 
   const to = from + delta
-  if (to < 0 || to >= blocks.length) return composition
+  if (to < 0 || to >= root.length) return composition
 
-  const [moved] = blocks.splice(from, 1)
-  blocks.splice(to, 0, moved)
-  return { ...composition, blocks }
+  const [moved] = root.splice(from, 1)
+  root.splice(to, 0, moved)
+  return { ...composition, root }
 }
 
 export function updateBlock(
@@ -307,23 +422,21 @@ export function updateBlock(
 ): Composition {
   return {
     ...composition,
-    blocks: composition.blocks.map((block) =>
-      block.id === id ? { ...block, values: update(block.values) } : block,
+    root: updateNode(composition.root, id, (node) =>
+      node.kind === 'component' ? { ...node, values: update(node.values) } : node,
     ),
   }
 }
 
-/** Shared shape for the small per-block setters below. */
+/** Shared shape for the small per-node placement setters below. */
 function patchBlock(
   composition: Composition,
   id: string,
-  patch: Partial<CompositionBlock>,
+  patch: Partial<NodePlacement>,
 ): Composition {
   return {
     ...composition,
-    blocks: composition.blocks.map((block) =>
-      block.id === id ? { ...block, ...patch } : block,
-    ),
+    root: updateNode(composition.root, id, (node) => ({ ...node, ...patch })),
   }
 }
 
@@ -357,10 +470,11 @@ export function duplicateBlock(
   composition: Composition,
   id: string,
 ): { composition: Composition; id: string } | null {
-  const source = composition.blocks.find((block) => block.id === id)
-  if (!source) return null
+  // Slice B: leaves only, at the top level. Duplicating a container is Slice E.
+  const source = composition.root.find((node) => node.id === id)
+  if (!source || source.kind !== 'component') return null
 
-  const copy: CompositionBlock = {
+  const copy: ComponentNode = {
     ...source,
     id: blockId(),
     // Deep enough: props and children are flat, slots are one level.
@@ -386,17 +500,33 @@ export function duplicateBlock(
  * canvas on a component that cannot be resolved.
  */
 export function pruneBlocks(composition: Composition): Composition {
-  const blocks = composition.blocks.filter((block) => {
-    if (getManifest(block.component)) return true
-    console.warn(
-      `[compose] dropping block for unregistered component "${block.component}".`,
-    )
-    return false
-  })
+  const root = pruneNodes(composition.root)
+  return root === composition.root ? composition : { ...composition, root }
+}
 
-  return blocks.length === composition.blocks.length
-    ? composition
-    : { ...composition, blocks }
+function pruneNodes(nodes: Node[]): Node[] {
+  let changed = false
+  const out: Node[] = []
+  for (const node of nodes) {
+    if (node.kind === 'component') {
+      if (getManifest(node.component)) {
+        out.push(node)
+      } else {
+        console.warn(
+          `[compose] dropping block for unregistered component "${node.component}".`,
+        )
+        changed = true
+      }
+    } else {
+      const children = pruneNodes(node.children)
+      if (children === node.children) out.push(node)
+      else {
+        out.push({ ...node, children })
+        changed = true
+      }
+    }
+  }
+  return changed ? out : nodes
 }
 
 /** Span presets offered in the block toolbar, as fractions of the grid. */

@@ -10,6 +10,7 @@ import {
   themeFromPreset,
 } from '../lib/theme'
 import type { Composition } from '../lib/composition'
+import { componentNodes } from '../lib/composition'
 import { getManifest } from '../lib/registry'
 import styles from './ThemePanel.module.css'
 
@@ -255,7 +256,7 @@ export default function ThemePanel({
       }
     }
 
-    for (const block of composition.blocks) {
+    for (const block of componentNodes(composition.root)) {
       const manifest = getManifest(block.component)
       if (!manifest) continue
 
