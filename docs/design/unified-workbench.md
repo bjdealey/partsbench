@@ -136,7 +136,7 @@ Preserve the existing dark, theme-aware three-region shell (`styles.layout` grid
 │ (dev drawer — collapsed: Event log)                                            │
 └──────────────────────────────────────────────────────────────────────────────┘
 
-< 900px: the three regions collapse to the existing region-tabs (Left · Center · Right).
+< 900px: the three regions collapse to the existing region-tabs (labelled Library · Canvas · Controls).
 The Mode dimension is gone, so the mobile tab bar now carries regions only.
 ```
 

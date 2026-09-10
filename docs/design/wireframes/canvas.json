@@ -13,13 +13,13 @@
     { "file": "Mobile.dc.html", "page": "page-2", "x": 2960, "y": 0, "w": 390, "h": 844, "title": "Mobile — region tabs" }
   ],
   "annotations": [
-    { "id": "n1-main", "page": "page-1", "x": 0, "y": -132, "w": 360, "text": "1 · The Workbench, nothing selected. Left: Library. Center: 12-column canvas (note the Container). Right: page settings + shared Theme. No Mode switch — this one surface replaces Gallery / Component / Compose." },
-    { "id": "n2-single", "page": "page-1", "x": 1480, "y": -132, "w": 360, "text": "2 · Select one node → its manifest controls, grouped Content / Appearance / Behaviour + a Layout section. Theme-driven props carry a detachable 'theme' chip (Q6)." },
+    { "id": "n1-main", "page": "page-1", "x": 0, "y": -176, "w": 360, "text": "1 · The Workbench, nothing selected. Left: Library. Center: 12-column canvas (note the Container). Right: page settings + shared Theme. No Mode switch — this one surface replaces Gallery / Component / Compose." },
+    { "id": "n2-single", "page": "page-1", "x": 1480, "y": -176, "w": 360, "text": "2 · Select one node → its manifest controls, grouped Content / Appearance / Behaviour + a Layout section. Theme-driven props carry a detachable 'theme' chip (Q6)." },
     { "id": "n3-container", "page": "page-1", "x": 0, "y": 906, "w": 360, "text": "3 · Select a Container → stack controls (direction / gap / align / padding) + grid span + Publish as component. The left rail is flipped to the Outline node tree (Q4, Q7)." },
     { "id": "n4-multi", "page": "page-1", "x": 1480, "y": 906, "w": 360, "text": "4 · Select several → the intersection of common props (by name + kind) + align / distribute + bulk span. 'Mixed' means values differ; set it to unify (Q9)." },
-    { "id": "n5-drag", "page": "page-2", "x": 0, "y": -132, "w": 360, "text": "5 · Drag a component from the Library onto the grid. A drop indicator shows the insertion point and resulting span; the node lands selected. Keyboard + span buttons remain as fallbacks (Q3)." },
-    { "id": "n6-lib", "page": "page-2", "x": 1480, "y": -132, "w": 360, "text": "6 · My Library — the saved-composition store that today does not exist, so 'open an existing composition' finally has something to open. Share = URL link; opening a link imports. Old Variants migrate in as single-node items (Q5)." },
-    { "id": "n7-mobile", "page": "page-2", "x": 2960, "y": -132, "w": 360, "text": "7 · Below 900px the three regions collapse to Left / Center / Right tabs. minSpan forces nodes full-width; authored spans return on Desktop. No fake status bar." }
+    { "id": "n5-drag", "page": "page-2", "x": 0, "y": -176, "w": 360, "text": "5 · Drag a component from the Library onto the grid. A drop indicator shows the insertion point and resulting span; the node lands selected. Keyboard + span buttons remain as fallbacks (Q3)." },
+    { "id": "n6-lib", "page": "page-2", "x": 1480, "y": -176, "w": 360, "text": "6 · My Library — the saved-composition store that today does not exist, so 'open an existing composition' finally has something to open. Share = URL link; opening a link imports. Old Variants migrate in as single-node items (Q5)." },
+    { "id": "n7-mobile", "page": "page-2", "x": 2960, "y": -176, "w": 360, "text": "7 · Below 900px the three regions collapse to Library / Canvas / Controls tabs. minSpan forces nodes full-width; authored spans return on Desktop. No fake status bar." }
   ],
   "launch": { "view": "canvas", "page": "page-1" }
 }
