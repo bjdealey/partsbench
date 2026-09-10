@@ -6,8 +6,8 @@ import styles from './BlockOutline.module.css'
 interface BlockOutlineProps {
   className?: string
   composition: Composition
-  selectedId: string | null
-  onSelect: (id: string) => void
+  selectedIds: string[]
+  onSelect: (id: string, additive?: boolean) => void
   onAdd: () => void
 }
 
@@ -21,7 +21,7 @@ interface BlockOutlineProps {
 export default function BlockOutline({
   className,
   composition,
-  selectedId,
+  selectedIds,
   onSelect,
   onAdd,
 }: BlockOutlineProps) {
@@ -31,7 +31,7 @@ export default function BlockOutline({
 
   function renderNodes(nodes: Node[], depth: number) {
     return nodes.map((node) => {
-      const active = selectedId === node.id
+      const active = selectedIds.includes(node.id)
       // 10px is `.item`'s own left padding; each level adds a step so nesting reads.
       const indent = { paddingLeft: 10 + depth * 14 }
 
@@ -43,7 +43,7 @@ export default function BlockOutline({
               type="button"
               className={`${styles.item} ${styles.container} ${active ? styles.active : ''}`}
               aria-current={active ? 'true' : undefined}
-              onClick={() => onSelect(node.id)}
+              onClick={(event) => onSelect(node.id, event.shiftKey || event.metaKey || event.ctrlKey)}
               title={`Container — ${node.direction}, ${childCount} inside`}
               style={indent}
             >
@@ -66,7 +66,7 @@ export default function BlockOutline({
               known ? '' : styles.missing
             }`}
             aria-current={active ? 'true' : undefined}
-            onClick={() => onSelect(node.id)}
+            onClick={(event) => onSelect(node.id, event.shiftKey || event.metaKey || event.ctrlKey)}
             title={known ? node.component : `${node.component} — not registered`}
             style={indent}
           >

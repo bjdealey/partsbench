@@ -14,11 +14,15 @@ import {
   createBlock,
   findComponentNode,
   findNode,
+  groupNodes,
   pruneBlocks,
+  removeNodes,
   setContainerLayout,
+  setSpanMany,
   ungroupContainer,
   updateBlock,
   DEVICES,
+  SPAN_PRESETS,
 } from '../lib/composition'
 import { DEFAULT_SCENE, buildScene, sceneByName } from '../lib/scenes'
 import { generatePage, generateTokens } from '../lib/compositionCodegen'
@@ -145,7 +149,26 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(
     () => fromComposeUrl?.theme ?? defaultTheme(),
   )
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
+  // Selection is a set (Slice H): one id drives the single-node inspector, more
+  // than one drives the multi-select controls. `selectedId` is the single-only
+  // view the existing single-node paths read; `selectOne`/`handleSelect` are the
+  // writers (a plain click replaces, a shift/⌘-click toggles).
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const selectedBlockId = selectedIds.length === 1 ? selectedIds[0] : null
+  const selectOne = useCallback((id: string | null) => setSelectedIds(id ? [id] : []), [])
+  const handleSelect = useCallback((id: string | null, additive?: boolean) => {
+    if (id === null) {
+      setSelectedIds([])
+      return
+    }
+    if (additive) {
+      setSelectedIds((prev) =>
+        prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id],
+      )
+    } else {
+      setSelectedIds([id])
+    }
+  }, [])
   const [picking, setPicking] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
 
@@ -316,7 +339,7 @@ export default function App() {
         setFocusOpen(false)
         setComposition(pruneBlocks(composed.composition))
         setTheme(composed.theme)
-        setSelectedBlockId(null)
+        setSelectedIds([])
         return
       }
 
@@ -599,7 +622,7 @@ export default function App() {
     setTheme(parsed.theme)
     setStageTheme(parsed.theme.mode)
     setFocusOpen(false)
-    setSelectedBlockId(null)
+    setSelectedIds([])
     if (isMobile) setMobileTab('center')
   }
 
@@ -661,7 +684,7 @@ export default function App() {
       }
       return { ...next, name: sceneByName(prev.name) ? `${prev.name} (edited)` : prev.name }
     })
-    setSelectedBlockId(nodes[0].id)
+    selectOne(nodes[0].id)
     setFocusOpen(false)
     if (isMobile) setMobileTab('center')
   }
@@ -677,6 +700,27 @@ export default function App() {
 
   function handleDeletePublished(entry: PublishedComponent) {
     setPublished(deletePublished(entry.id))
+  }
+
+  /* ---------------- multi-select (Slice H) ---------------- */
+
+  // Group the selection into one container (only when the nodes share a parent —
+  // groupNodes returns null otherwise), then select the new container.
+  function handleGroupSelection() {
+    const result = groupNodes(composition, selectedIds)
+    if (result) {
+      setComposition(result.composition)
+      selectOne(result.id)
+    }
+  }
+
+  function handleSpanSelection(span: number) {
+    setComposition((prev) => setSpanMany(prev, selectedIds, span))
+  }
+
+  function handleRemoveSelection() {
+    setComposition((prev) => removeNodes(prev, selectedIds))
+    setSelectedIds([])
   }
 
   /**
@@ -732,7 +776,7 @@ export default function App() {
         },
       }
     })
-    setSelectedBlockId(null)
+    setSelectedIds([])
     setEvents([])
   }
 
@@ -801,7 +845,7 @@ export default function App() {
       ...addBlock(prev, block, selectedBlockId ?? undefined),
       name: sceneByName(prev.name) ? `${prev.name} (edited)` : prev.name,
     }))
-    setSelectedBlockId(block.id)
+    selectOne(block.id)
   }
 
   /** Slice D: a library component dragged onto the canvas lands at `index`. */
@@ -813,7 +857,7 @@ export default function App() {
       ...addNodeAt(prev, block, index),
       name: sceneByName(prev.name) ? `${prev.name} (edited)` : prev.name,
     }))
-    setSelectedBlockId(block.id)
+    selectOne(block.id)
     setFocusOpen(false)
   }
 
@@ -826,7 +870,7 @@ export default function App() {
       ...addNodeToContainer(prev, containerId, block),
       name: sceneByName(prev.name) ? `${prev.name} (edited)` : prev.name,
     }))
-    setSelectedBlockId(block.id)
+    selectOne(block.id)
     setFocusOpen(false)
   }
 
@@ -1089,9 +1133,9 @@ export default function App() {
                 <BlockOutline
                   className={styles.railBody}
                   composition={composition}
-                  selectedId={selectedBlockId}
-                  onSelect={(id) => {
-                    setSelectedBlockId(id)
+                  selectedIds={selectedIds}
+                  onSelect={(id, additive) => {
+                    handleSelect(id, additive)
                     setFocusOpen(false)
                     if (isMobile) setMobileTab('center')
                   }}
@@ -1112,14 +1156,14 @@ export default function App() {
                   // A selection outlined behind the chrome that just went away
                   // would come back on exit pointing at whatever you last
                   // clicked, which by then is not what you selected.
-                  if (next) setSelectedBlockId(null)
+                  if (next) setSelectedIds([])
                 }}
-                selectedId={selectedBlockId}
-                onSelect={setSelectedBlockId}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
                 onChange={setComposition}
                 onSelectAndChange={(next, id) => {
                   setComposition(next)
-                  setSelectedBlockId(id)
+                  selectOne(id)
                 }}
                 onEvent={handleEvent}
                 onBlockPropChange={handleBlockPropChange}
@@ -1202,6 +1246,48 @@ export default function App() {
               </>
             )}
 
+            {composing && selectedIds.length > 1 && (
+              <div className={styles.multi} data-multi-controls="">
+                <div className={styles.multiHead}>
+                  <span className={styles.ccName}>{selectedIds.length} selected</span>
+                  <button
+                    type="button"
+                    className={styles.multiRemove}
+                    onClick={handleRemoveSelection}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <p className={styles.ccHint}>
+                  Editing several at once. Set one width for all, or group them into a
+                  container.
+                </p>
+                <div className={styles.ccRow}>
+                  <span className={styles.ccField}>Width</span>
+                  <div className={styles.multiSpans} role="group" aria-label="Width">
+                    {SPAN_PRESETS.map((preset) => (
+                      <button
+                        key={preset.span}
+                        type="button"
+                        className={styles.multiSpan}
+                        onClick={() => handleSpanSelection(preset.span)}
+                        title={`Set all to ${preset.label}`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={styles.multiGroup}
+                  onClick={handleGroupSelection}
+                >
+                  Group into a container
+                </button>
+              </div>
+            )}
+
             {composing && selectedBlockId && (selectedBlock || selectedContainer) && (
               <div className={styles.publishRow} data-publish-row="">
                 {publishing ? (
@@ -1251,7 +1337,7 @@ export default function App() {
                     className={styles.ccUngroup}
                     onClick={() => {
                       setComposition((prev) => ungroupContainer(prev, selectedContainer.id))
-                      setSelectedBlockId(null)
+                      setSelectedIds([])
                     }}
                   >
                     Ungroup
@@ -1352,12 +1438,16 @@ export default function App() {
                 onRandomize={handleRandomize}
                 onEffectChange={composing ? undefined : handleEffectChange}
               />
+            ) : composing && selectedIds.length > 1 ? (
+              // A multi-selection is handled by the panel above; no empty state here.
+              null
             ) : (
               <div className={styles.noSelection}>
                 <p className={styles.noSelectionTitle}>Nothing selected</p>
                 <p className={styles.noSelectionBody}>
-                  Click a component on the page to edit just that one. The theme
-                  above drives all of them at once.
+                  Click a component on the page to edit just that one, or
+                  shift-click to select several. The theme above drives all of them
+                  at once.
                 </p>
               </div>
             )}
