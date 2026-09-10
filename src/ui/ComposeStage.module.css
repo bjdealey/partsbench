@@ -10,22 +10,18 @@
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* The "COMPOSE" mode label is gone (Slice H); the controls are the toolbar,
+     kept in the top-right corner they've always occupied. */
+  justify-content: flex-end;
   gap: 16px;
   padding-bottom: 10px;
-}
-
-.label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-faint);
 }
 
 .toolbarRight {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 14px;
 }
 

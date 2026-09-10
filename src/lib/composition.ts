@@ -556,6 +556,77 @@ export function setContainerLayout(
   }
 }
 
+/**
+ * Wraps several sibling nodes in one new container, in place (Slice H
+ * group-multiple). The nodes must share a parent — the container lands at the
+ * position of the first of them, holding them in their existing order — else the
+ * group is refused (null). Returns the new container's id.
+ */
+export function groupNodes(
+  composition: Composition,
+  ids: string[],
+): { composition: Composition; id: string } | null {
+  if (ids.length < 2) return null
+
+  // Every node must live in the same sibling list, or there is no one place to
+  // put the container.
+  const parents = new Set<string | null>()
+  for (const id of ids) {
+    const at = locate(composition.root, id)
+    if (!at) return null
+    parents.add(at.parentId)
+  }
+  if (parents.size !== 1) return null
+  const parentId = [...parents][0]
+
+  const siblings =
+    parentId === null
+      ? composition.root
+      : (findNode(composition.root, parentId) as ContainerNode | null)?.children
+  if (!siblings) return null
+
+  const idSet = new Set(ids)
+  const chosen = siblings.filter((node) => idSet.has(node.id))
+  if (chosen.length !== ids.length) return null
+  const container = createContainer(chosen, COLUMNS)
+
+  const next: Node[] = []
+  let placed = false
+  for (const node of siblings) {
+    if (idSet.has(node.id)) {
+      if (!placed) {
+        next.push(container)
+        placed = true
+      }
+    } else {
+      next.push(node)
+    }
+  }
+
+  const root =
+    parentId === null
+      ? next
+      : updateNode(composition.root, parentId, (node) =>
+          node.kind === 'container' ? { ...node, children: next } : node,
+        )
+  return { composition: { ...composition, root }, id: container.id }
+}
+
+/** Sets the column span on many nodes at once (Slice H bulk span). */
+export function setSpanMany(composition: Composition, ids: string[], span: number): Composition {
+  const clamped = Math.min(COLUMNS, Math.max(1, span))
+  let root = composition.root
+  for (const id of ids) root = updateNode(root, id, (node) => ({ ...node, span: clamped }))
+  return { ...composition, root }
+}
+
+/** Removes many nodes at once, at any depth (Slice H multi-remove). */
+export function removeNodes(composition: Composition, ids: string[]): Composition {
+  let root = composition.root
+  for (const id of ids) root = removeNode(root, id)
+  return { ...composition, root }
+}
+
 /** Replaces a container with its children, at any depth (Slice E ungroup). */
 export function ungroupContainer(composition: Composition, id: string): Composition {
   function walk(nodes: Node[]): Node[] {

@@ -508,6 +508,82 @@
   color: var(--text);
 }
 
+/* --- Multi-select controls (Slice H) --- */
+
+.multi {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.multiHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.multiRemove {
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.multiRemove:hover {
+  background: #fee2e2;
+  color: var(--danger);
+}
+
+.multiSpans {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-alt);
+}
+
+.multiSpan {
+  min-width: 30px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.multiSpan:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.multiGroup {
+  width: 100%;
+  padding: 7px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 0.1s ease, background-color 0.1s ease;
+}
+
+.multiGroup:hover {
+  filter: brightness(0.97);
+  background: var(--accent-soft);
+}
+
 /* --- empty registry --- */
 
 .empty {

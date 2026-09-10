@@ -120,8 +120,10 @@ interface ComposeStageProps {
    */
   interactive: boolean
   onInteractiveChange: (interactive: boolean) => void
-  selectedId: string | null
-  onSelect: (id: string | null) => void
+  /** Every selected node (Slice H multi-select) — highlighted together. */
+  selectedIds: string[]
+  /** `additive` (shift/⌘-click) toggles the id in the selection instead of replacing. */
+  onSelect: (id: string | null, additive?: boolean) => void
   onChange: (next: Composition) => void
   onSelectAndChange: (next: Composition, id: string) => void
   onEvent: EventReporter
@@ -144,7 +146,7 @@ export default function ComposeStage({
   theme,
   interactive,
   onInteractiveChange,
-  selectedId,
+  selectedIds,
   onSelect,
   onChange,
   onSelectAndChange,
@@ -185,7 +187,7 @@ export default function ComposeStage({
   function handleRemove(id: string, label: string) {
     setUndo({ composition, label })
     onChange(removeBlock(composition, id))
-    if (id === selectedId) onSelect(null)
+    if (selectedIds.includes(id)) onSelect(null)
     if (undoTimer.current !== null) window.clearTimeout(undoTimer.current)
     undoTimer.current = window.setTimeout(() => setUndo(null), 6000)
   }
@@ -229,7 +231,7 @@ export default function ComposeStage({
         node={node}
         page={page}
         interactive={interactive}
-        selected={node.id === selectedId}
+        selected={selectedIds.includes(node.id)}
         dropTarget={dropContainerId === node.id}
         composition={composition}
         onSelect={onSelect}
@@ -248,7 +250,7 @@ export default function ComposeStage({
         composition={composition}
         theme={theme}
         interactive={interactive}
-        selected={node.id === selectedId}
+        selected={selectedIds.includes(node.id)}
         onSelect={onSelect}
         onChange={onChange}
         onSelectAndChange={onSelectAndChange}
@@ -396,8 +398,6 @@ export default function ComposeStage({
   return (
     <section className={styles.wrapper} aria-label="Composition">
       <div className={styles.toolbar}>
-        <span className={styles.label}>Compose</span>
-
         <div className={styles.toolbarRight}>
           <div className={styles.devices} role="group" aria-label="Canvas mode">
             {[
@@ -632,7 +632,7 @@ interface BlockProps {
   theme: Theme | null
   interactive: boolean
   selected: boolean
-  onSelect: (id: string | null) => void
+  onSelect: (id: string | null, additive?: boolean) => void
   onChange: (next: Composition) => void
   onSelectAndChange: (next: Composition, id: string) => void
   onEvent: EventReporter
@@ -727,7 +727,11 @@ function Block({
       // handler, which silently swallowed the chrome buttons' own clicks and the
       // previewed component's. Deselect is handled on the scroller instead, which
       // ignores any click that landed on a block.
-      onClickCapture={interactive ? undefined : () => onSelect(block.id)}
+      onClickCapture={
+        interactive
+          ? undefined
+          : (event) => onSelect(block.id, event.shiftKey || event.metaKey || event.ctrlKey)
+      }
       // Enter/Space select — but only from the block itself, never a keystroke
       // meant for a field inside the previewed component.
       onKeyDown={
@@ -939,7 +943,7 @@ interface ContainerProps {
   selected: boolean
   dropTarget: boolean
   composition: Composition
-  onSelect: (id: string | null) => void
+  onSelect: (id: string | null, additive?: boolean) => void
   onChange: (next: Composition) => void
   onRemove: (id: string, label: string) => void
   onNodeDrag: (id: string | null) => void
@@ -981,7 +985,11 @@ function Container({
       tabIndex={interactive ? -1 : 0}
       aria-pressed={interactive ? undefined : selected}
       aria-label={interactive ? undefined : 'Container'}
-      onClickCapture={interactive ? undefined : () => onSelect(node.id)}
+      onClickCapture={
+        interactive
+          ? undefined
+          : (event) => onSelect(node.id, event.shiftKey || event.metaKey || event.ctrlKey)
+      }
     >
       {!interactive && (
         <div className={styles.blockChrome} aria-hidden={!selected}>
