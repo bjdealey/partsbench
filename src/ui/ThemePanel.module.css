@@ -63,7 +63,7 @@
 .modeActive:hover {
   background: var(--panel);
   color: var(--text);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 1px 2px rgba(40, 32, 20, 0.1);
 }
 
 .reset {
@@ -146,7 +146,7 @@
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  border: 1px solid rgba(15, 23, 42, 0.14);
+  border: 1px solid rgba(40, 32, 20, 0.14);
 }
 
 /* Overlapped, so three colors read as one theme rather than three chips. */
@@ -460,7 +460,7 @@
   background: var(--panel);
   color: var(--text);
   font-weight: 500;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 1px 2px rgba(40, 32, 20, 0.1);
 }
 
 .choice:disabled {

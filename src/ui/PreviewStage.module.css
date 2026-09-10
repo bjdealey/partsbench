@@ -70,7 +70,7 @@
   background: var(--panel);
   color: var(--text);
   font-weight: 500;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-seated);
 }
 
 .stage {
@@ -87,13 +87,13 @@
 
 .stage[data-theme='light'] {
   background: var(--stage-light);
-  background-image: radial-gradient(circle, #e6e8ec 1px, transparent 1px);
+  background-image: radial-gradient(circle, #e5dfd4 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
 .stage[data-theme='dark'] {
   background: var(--stage-dark);
-  background-image: radial-gradient(circle, #2b2d34 1px, transparent 1px);
+  background-image: radial-gradient(circle, #2c2922 1px, transparent 1px);
   background-size: 16px 16px;
 }
 

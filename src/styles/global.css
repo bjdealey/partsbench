@@ -1,54 +1,69 @@
 :root {
-  --bg: #f6f7f9;
+  /* Warm graphite ground. The chrome is a machinist's bench, not a slate SaaS
+     shell — the neutrals carry a faint warmth (paper + anodized metal) so the
+     one cool accent reads like drafting ink laid over it. */
+  --bg: #f3f1ed;
   --panel: #ffffff;
-  --panel-alt: #fbfbfc;
-  --border: #e3e6ea;
-  --border-strong: #d3d8de;
-  --text: #17191c;
-  --text-muted: #6b7280;
-  /* Matches --text-muted. #9aa1ab was ~2.6:1 on white and failed WCAG AA on the
-     eyebrows/counts/hints it carries; a near-white chrome leaves no room for a
-     lighter tier that stays readable, so "quiet" now comes from size, caps, and
-     tracking rather than pale ink. */
-  --text-faint: #6b7280;
-  --accent: #4f46e5;
-  --accent-soft: #eef2ff;
+  --panel-alt: #f6f4f0;
+  --border: #e6e1d9;
+  --border-strong: #d6d0c5;
+  --text: #1c1a16;
+  --text-muted: #6a655c;
+  /* Matches --text-muted. A lighter tier can't clear WCAG AA on this warm-white
+     chrome, so "quiet" comes from size, caps, and tracking — never pale ink. */
+  --text-faint: #6a655c;
+  /* Bench Cobalt — the single accent. A grounded drafting-ink blue, deliberately
+     bluer and cooler than the old purple-indigo, so it reads as *marked by hand*
+     against the warm ground rather than as a stock brand tint. */
+  --accent: #2c56cc;
+  --accent-soft: #e9edfa;
   /* Readable ink on an accent fill; the deeper accent for a hover/pressed fill;
      the accent-soft ground pressed one step. */
   --on-accent: #ffffff;
-  --accent-strong: #4338ca;
-  --accent-soft-hover: #e6ebfe;
+  --accent-strong: #2144a3;
+  --accent-soft-hover: #dbe2f6;
+  /* The accent at low alpha — the ghost outline a canvas block wears on hover,
+     the one place the accent needs to sit *over* live content. */
+  --accent-ghost: rgba(44, 86, 204, 0.28);
   --radius: 8px;
 
   /* Status palette (DESIGN.md). Feedback only — never surfaces or brand. Single
      values, the same in light and dark, so they are not overridden below. */
-  --danger: #dc2626;
-  --danger-soft: #f1b4b4;
-  --danger-muted: #9a6a6a;
-  --success: #15803d;
+  --danger: #c2352c;
+  --danger-soft: #eab5b0;
+  --danger-muted: #94655f;
+  /* The warm-red wash a destructive control takes on hover — tuned to the warm
+     ground so "remove" reads hot without turning candy-pink. */
+  --danger-wash: #f6e1dd;
+  --success: #2f7d46;
   --warn: #b45309;
-  --warn-soft: #fef3c7;
+  --warn-soft: #fbeecb;
 
   /* Motion — one signature decelerating ease; dur-1 for state, dur-2 for lift/arrival. */
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-1: 0.11s;
   --dur-2: 0.2s;
 
-  /* Elevation vocabulary (slate ink). Flat at rest; these spend depth only on lift. */
-  --shadow-seated: 0 1px 2px rgba(15, 23, 42, 0.08);
-  --shadow-hover: 0 1px 3px rgba(15, 23, 42, 0.1), 0 8px 24px -6px rgba(15, 23, 42, 0.13);
-  --shadow-pop: 0 2px 8px rgba(15, 23, 42, 0.14);
-  --shadow-dialog: 0 16px 48px rgba(15, 23, 42, 0.24);
+  /* Elevation vocabulary (warm graphite ink). Flat at rest; these spend depth
+     only on lift, and always in the same warm ink so elevation reads as one
+     material with the ground. */
+  --shadow-seated: 0 1px 2px rgba(40, 32, 20, 0.09);
+  --shadow-hover: 0 1px 3px rgba(40, 32, 20, 0.1), 0 8px 24px -6px rgba(40, 32, 20, 0.14);
+  --shadow-pop: 0 2px 8px rgba(40, 32, 20, 0.15);
+  --shadow-dialog: 0 18px 50px rgba(30, 24, 14, 0.26);
+  /* The dim behind a modal — the same warm ink, made opaque enough to seat a
+     dialog over the bench. */
+  --scrim: rgba(34, 27, 16, 0.34);
 
   /* Toggle track, off — one step softer than border-strong. */
-  --switch-off: #cbd2da;
+  --switch-off: #cdc7bc;
 
   --stage-light: #ffffff;
   --stage-dark: #17181c;
 
   /* The preview canvas behind gallery tiles — follows the site light/dark. */
   --canvas: #ffffff;
-  --canvas-dot: #e6e8ec;
+  --canvas-dot: #e7e2da;
 
   --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
@@ -65,32 +80,40 @@
    values kept steady are the stage backdrops, which the preview toggles itself,
    and the fonts. */
 :root[data-theme='dark'] {
-  --bg: #0e0f12;
-  --panel: #1b1d22;
+  /* The bench after hours — a warm near-black, not a cool charcoal. The same
+     paper-and-metal warmth carried into shadow, so light and dark are one room. */
+  --bg: #131210;
+  --panel: #1d1b17;
   /* A step *above* the surface here, so hovers lighten (as dark UIs expect) and
      the mode-switch active — on the darker --panel — reads pressed into its track. */
-  --panel-alt: #24262c;
-  --border: #2b2e35;
-  --border-strong: #3b3f47;
-  --text: #eceef2;
-  --text-muted: #9aa1ab;
-  --text-faint: #9aa1ab;
-  --accent: #818cf8;
-  /* The selected/active ground and the focus halo — a dark indigo wash that
+  --panel-alt: #262320;
+  --border: #302c26;
+  --border-strong: #423d35;
+  --text: #ece8e0;
+  --text-muted: #a29b8e;
+  --text-faint: #a29b8e;
+  /* Cobalt lifted for the dark ground — brighter and a touch airier so it clears
+     AA on the surfaces below, still unmistakably the same drafting ink. */
+  --accent: #7ea3f5;
+  /* The selected/active ground and the focus halo — a deep cobalt wash that
      still carries the accent as a foreground at AA. */
-  --accent-soft: #262a45;
-  --accent-strong: #9aa2fa;
-  /* Dark accent fills carry dark ink; white would read at ~2.8:1 on the lifted indigo. */
-  --on-accent: #17191c;
-  --accent-soft-hover: #2e3352;
-  --canvas: #17181c;
-  --canvas-dot: #2b2d34;
-  --switch-off: #3b3f47;
-  /* On near-black, slate shadows vanish — lift with black ink so depth still reads. */
-  --shadow-seated: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.5), 0 10px 26px -8px rgba(0, 0, 0, 0.55);
-  --shadow-pop: 0 2px 10px rgba(0, 0, 0, 0.5);
-  --shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --accent-soft: #22304e;
+  --accent-strong: #a6c0fb;
+  /* Dark accent fills carry dark ink; white would read at ~2.9:1 on the lifted cobalt. */
+  --on-accent: #12131a;
+  --accent-soft-hover: #2b3a5c;
+  --accent-ghost: rgba(126, 163, 245, 0.32);
+  --danger-wash: #4a2622;
+  --canvas: #171612;
+  --canvas-dot: #2c2922;
+  --switch-off: #423d35;
+  /* On near-black, warm shadows vanish — lift with near-black ink so depth still
+     reads, kept a hair warm to match the ground. */
+  --shadow-seated: 0 1px 2px rgba(0, 0, 0, 0.42);
+  --shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.5), 0 10px 26px -8px rgba(0, 0, 0, 0.56);
+  --shadow-pop: 0 2px 10px rgba(0, 0, 0, 0.52);
+  --shadow-dialog: 0 18px 50px rgba(0, 0, 0, 0.62);
+  --scrim: rgba(0, 0, 0, 0.52);
 }
 
 /* Pixelify Sans (OFL) — bundled, never fetched at runtime. See

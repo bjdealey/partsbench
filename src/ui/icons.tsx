@@ -612,6 +612,13 @@ const GLYPHS: Record<string, ReactNode> = {
   // --- app chrome (not component icons): the menu toggle + mobile nav ---
   hamburger: <path d="M4 7h16M4 12h16M4 17h16" />,
   chevronLeft: <path d="M14.5 6l-6 6 6 6" />,
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="3.6" />
+      <path d="M12 3v2.2M12 18.8V21M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M3 12h2.2M18.8 12H21M5.2 18.8l1.6-1.6M17.2 6.8l1.6-1.6" />
+    </>
+  ),
+  moon: <path d="M19.5 14.4A7.5 7.5 0 1 1 9.6 4.5a6 6 0 0 0 9.9 9.9z" />,
   eye: (
     <>
       <path d="M2 12s3.6-6.5 10-6.5 10 6.5 10 6.5-3.6 6.5-10 6.5S2 12 2 12z" />
@@ -771,6 +778,31 @@ export function componentIconKey(manifest: ComponentManifest): string {
 
 export function categoryIconKey(category: string): string {
   return CATEGORY_GLYPH[category] ?? 'component'
+}
+
+/**
+ * The PartsBench brand mark — a part clamped between two brackets, the
+ * workbench in miniature. Its own component (not a keyed Glyph) because it pairs
+ * stroked brackets with a filled center part, and it renders knocked out of the
+ * accent plate in the header. Drawn on the same 24-grid as the icon set.
+ */
+export function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M8.8 4.8H5.6v14.4h3.2" />
+      <path d="M15.2 4.8h3.2v14.4h-3.2" />
+      <rect x="9.9" y="9.9" width="4.2" height="4.2" rx="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
 }
 
 /** A glyph by key. Consistent stroke and box, coloured by `currentColor`. */

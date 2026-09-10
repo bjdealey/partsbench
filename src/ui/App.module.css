@@ -83,11 +83,30 @@
   }
 }
 
+/* The brand mark: a solid cobalt plate stamped with a drawn glyph — a part
+   clamped in brackets, the workbench in miniature. A real mark, not a gradient
+   placeholder; the glyph knocks out in on-accent so it adapts to light/dark. */
 .mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.markGlyph {
   width: 15px;
   height: 15px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+}
+
+/* Drawn sun/moon for the light/dark switch — the same authored line-icon
+   language as the rest of the chrome, not an emoji glued into the toolbar. */
+.themeIcon {
+  width: 15px;
+  height: 15px;
 }
 
 .title {
@@ -536,7 +555,7 @@
 }
 
 .multiRemove:hover {
-  background: #fee2e2;
+  background: var(--danger-wash);
   color: var(--danger);
 }
 

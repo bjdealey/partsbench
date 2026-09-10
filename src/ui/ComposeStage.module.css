@@ -220,7 +220,7 @@
 }
 
 .block:hover {
-  outline-color: rgba(79, 70, 229, 0.28);
+  outline-color: var(--accent-ghost);
 }
 
 /* Keyboard focus lands a solid ring — the block is a real button now, and this
@@ -423,7 +423,7 @@
 }
 
 .remove:hover:not(:disabled) {
-  background: #fee2e2;
+  background: var(--danger-wash);
   color: var(--danger);
 }
 

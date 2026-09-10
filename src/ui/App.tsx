@@ -78,7 +78,7 @@ import ControlsPanel from './ControlsPanel'
 import { COMPONENT_VIEWS, PAGE_VIEWS } from './CodePanel'
 import ExportDialog from './ExportDialog'
 import EventLog from './EventLog'
-import { Glyph } from './icons'
+import { Glyph, BrandMark } from './icons'
 import styles from './App.module.css'
 
 /** The three layout regions become tabs on a narrow screen. */
@@ -1107,7 +1107,9 @@ export default function App() {
               <Glyph name="hamburger" />
             </button>
           )}
-          <span className={styles.mark} aria-hidden="true" />
+          <span className={styles.mark} aria-hidden="true">
+            <BrandMark className={styles.markGlyph} />
+          </span>
           <h1 className={styles.title}>PartsBench</h1>
           <button
             type="button"
@@ -1143,7 +1145,10 @@ export default function App() {
                 aria-label={option === 'light' ? 'Light mode' : 'Dark mode'}
                 onClick={() => handleThemeMode(option)}
               >
-                {option === 'light' ? '☀' : '☾'}
+                <Glyph
+                  name={option === 'light' ? 'sun' : 'moon'}
+                  className={styles.themeIcon}
+                />
               </button>
             ))}
           </div>
