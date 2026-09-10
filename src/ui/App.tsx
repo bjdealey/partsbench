@@ -49,6 +49,16 @@ import {
   nextVariantName,
   type Variant,
 } from '../lib/variants'
+import {
+  loadLibrary,
+  saveToLibrary,
+  renameLibraryEntry,
+  deleteLibraryEntry,
+  openLibraryEntry,
+  migrateVariantsToLibrary,
+  nextLibraryName,
+  type LibraryEntry,
+} from '../lib/library'
 import Splitter from './Splitter'
 import Sidebar from './Sidebar'
 import HeaderSearch from './HeaderSearch'
@@ -56,6 +66,7 @@ import PreviewStage, { type StageTheme } from './PreviewStage'
 import ContactSheet from './ContactSheet'
 import VariantsStrip from './VariantsStrip'
 import BlockOutline from './BlockOutline'
+import MyLibrary from './MyLibrary'
 import ComposeStage from './ComposeStage'
 import ThemePanel from './ThemePanel'
 import AddBlockDialog from './AddBlockDialog'
@@ -94,9 +105,10 @@ export default function App() {
   const [focusOpen, setFocusOpen] = useState<boolean>(
     () => !!(fromUrl && manifests.some((entry) => entry.name === fromUrl.name)),
   )
-  // Which section the left rail shows: the component Library (browse) or the
-  // canvas Outline. One rail, both reachable, independent of the surface.
-  const [railTab, setRailTab] = useState<'library' | 'outline'>('library')
+  // Which section the left rail shows: the component Library (browse), the
+  // owner's Saved pages (My Library), or the canvas Outline. One rail, all
+  // reachable, independent of the surface.
+  const [railTab, setRailTab] = useState<'library' | 'saved' | 'outline'>('library')
 
   const [selected, setSelected] = useState(() => {
     const named = fromUrl && manifests.some((entry) => entry.name === fromUrl.name)
@@ -200,6 +212,14 @@ export default function App() {
   // applied so its chip can show its actions. Loaded per component below.
   const [variants, setVariants] = useState<Variant[]>([])
   const [activeVariantId, setActiveVariantId] = useState<string | null>(null)
+
+  // My Library (Slice F): the owner's saved pages (localStorage). The old
+  // per-component Variants are imported once on first run — see the effect below.
+  const [library, setLibrary] = useState<LibraryEntry[]>(() => loadLibrary())
+  useEffect(() => {
+    migrateVariantsToLibrary()
+    setLibrary(loadLibrary())
+  }, [])
 
   const [events, setEvents] = useState<LoggedEvent[]>([])
   const nextEventId = useRef(0)
@@ -592,6 +612,36 @@ export default function App() {
     if (activeVariantId === variant.id) setActiveVariantId(null)
   }
 
+  /* ---------------- My Library (Slice F) ---------------- */
+
+  // Save the whole page — its node tree, page settings, and theme — to the
+  // browser-persisted library under a name, newest first.
+  function handleSaveToLibrary(name: string) {
+    setLibrary(saveToLibrary(name, composition, theme))
+  }
+
+  // Open a saved page onto the canvas. Decoding mints fresh node ids, so the
+  // opened tree never collides with what was there; the theme rides along, and
+  // the surface returns to the canvas with nothing selected.
+  function handleOpenLibrary(entry: LibraryEntry) {
+    const parsed = openLibraryEntry(entry)
+    if (!parsed) return
+    setComposition(pruneBlocks(parsed.composition))
+    setTheme(parsed.theme)
+    setStageTheme(parsed.theme.mode)
+    setFocusOpen(false)
+    setSelectedBlockId(null)
+    if (isMobile) setMobileTab('center')
+  }
+
+  function handleRenameLibrary(id: string, name: string) {
+    setLibrary(renameLibraryEntry(id, name))
+  }
+
+  function handleDeleteLibrary(entry: LibraryEntry) {
+    setLibrary(deleteLibraryEntry(entry.id))
+  }
+
   /**
    * Randomise. In compose it restyles the selected block under the page theme;
    * everywhere else it generates the global design system above.
@@ -966,6 +1016,15 @@ export default function App() {
                   <button
                     type="button"
                     role="tab"
+                    aria-selected={railTab === 'saved'}
+                    className={`${styles.mode} ${railTab === 'saved' ? styles.modeActive : ''}`}
+                    onClick={() => setRailTab('saved')}
+                  >
+                    Saved
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
                     aria-selected={railTab === 'outline'}
                     className={`${styles.mode} ${railTab === 'outline' ? styles.modeActive : ''}`}
                     onClick={() => setRailTab('outline')}
@@ -981,6 +1040,16 @@ export default function App() {
                   selected={focusOpen ? activeName : ''}
                   onSelect={openComponent}
                   onStep={handleStep}
+                />
+              ) : railTab === 'saved' ? (
+                <MyLibrary
+                  className={styles.railBody}
+                  entries={library}
+                  suggestedName={composition.name?.trim() || nextLibraryName(library)}
+                  onSave={handleSaveToLibrary}
+                  onOpen={handleOpenLibrary}
+                  onRename={handleRenameLibrary}
+                  onDelete={handleDeleteLibrary}
                 />
               ) : (
                 <BlockOutline
@@ -1291,7 +1360,11 @@ export default function App() {
       {tabbed && (
         <nav className={styles.mobileTabs} aria-label="Region">
           {[
-            { id: 'left' as const, label: railTab === 'library' ? 'Library' : 'Outline', icon: 'list' },
+            {
+              id: 'left' as const,
+              label: railTab === 'library' ? 'Library' : railTab === 'saved' ? 'Saved' : 'Outline',
+              icon: 'list',
+            },
             {
               id: 'center' as const,
               label: composing ? 'Canvas' : 'Preview',
