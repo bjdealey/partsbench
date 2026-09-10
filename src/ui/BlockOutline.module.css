@@ -6,6 +6,14 @@
   padding: 14px 10px;
 }
 
+/* On a phone the outline is the full-width Left tab, not a docked column. */
+@media (max-width: 899px) {
+  .outline {
+    flex: 1;
+    border-right: none;
+  }
+}
+
 .heading {
   display: flex;
   align-items: center;

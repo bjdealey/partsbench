@@ -194,16 +194,6 @@
   min-height: 0;
 }
 
-/* Everything under the preview step — the event log and code panel — grouped so
-   the phone can fold it away when the controls sheet is up. On desktop it's a
-   passthrough column that keeps the preview stretching above it. */
-.centerSecondary {
-  display: flex;
-  flex-direction: column;
-  flex: 0 0 auto;
-  min-height: 0;
-}
-
 .right {
   display: flex;
   flex-direction: column;
@@ -222,96 +212,6 @@
   flex: 0 0 auto;
   min-height: 0;
   overflow: hidden;
-}
-
-/* --- mobile: the component list as a slide-in drawer --- */
-/* Below the header, so its hamburger stays put to toggle it back shut. Only ever
-   rendered on the narrow layout. */
-.scrim {
-  position: fixed;
-  top: 52px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
-  background: rgba(15, 23, 42, 0.42);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-
-.scrimShown {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.drawer {
-  position: fixed;
-  top: 52px;
-  left: 0;
-  bottom: 0;
-  z-index: 41;
-  display: flex;
-  flex-direction: column;
-  width: min(82vw, 320px);
-  background: var(--panel);
-  box-shadow: 6px 0 28px -10px rgba(15, 23, 42, 0.4);
-  transform: translateX(-100%);
-  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.drawerOpen {
-  transform: translateX(0);
-}
-
-/* The drilled-in preview's toolbar: Back to the gallery, and the controls sheet
-   toggle. Only shown for a single component on a phone. */
-.mobileBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex: 0 0 auto;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.mobileBack,
-.mobileControlsToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px 6px 9px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--text-muted);
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.1s ease, color 0.1s ease, border-color 0.1s ease;
-}
-
-.mobileControlsToggle {
-  padding: 6px 12px;
-}
-
-.mobileBack:hover,
-.mobileControlsToggle:hover {
-  color: var(--text);
-}
-
-.mobileBack svg,
-.mobileControlsToggle svg {
-  width: 16px;
-  height: 16px;
-}
-
-.mobileControlsToggleOn,
-.mobileControlsToggleOn:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
 }
 
 /* --- Responsive: stack the panes below 900px (portrait tablet + phone) ---
@@ -335,26 +235,20 @@
     overflow-y: auto;
   }
 
-  /* The controls dock as a bottom sheet rather than a full-screen tab: capped so
-     the preview above stays in view, with a rounded lip and a shadow so it reads
-     as sitting over the preview. It only mounts on the edit tab, so this styling
-     never shows on the others. */
+  /* Each region is a full-height tab now (Left · Center · Right), one visible at a
+     time — the others are display:none via paneHidden. */
   .right {
-    flex: 0 0 auto;
-    max-height: 52vh;
+    flex: 1;
     min-height: 0;
     overflow-y: auto;
     border-left: none;
-    border-top: 1px solid var(--border);
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    box-shadow: 0 -10px 28px -8px rgba(15, 23, 42, 0.22);
   }
 
-  /* In the sheet the theme rig yields more room to the controls stacked below. */
+  /* On a phone the compose theme rig sizes to content so the controls below it in
+     the Right tab stay reachable. */
   .themeSlot {
     height: auto !important;
-    max-height: 32vh;
+    max-height: 40vh;
   }
 }
 
