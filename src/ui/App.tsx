@@ -12,10 +12,12 @@ import {
   addNodeAt,
   addNodeToContainer,
   createBlock,
+  detachProp,
   findComponentNode,
   findNode,
   groupNodes,
   pruneBlocks,
+  reattachProp,
   removeNodes,
   setContainerLayout,
   setSpanMany,
@@ -985,6 +987,34 @@ export default function App() {
     </>
   ) : undefined
 
+  // Theme chips (Slice H part 3): which of the selected block's props the shared
+  // theme is currently driving, and which it has detached — plus the values those
+  // themed props show, so detaching can pin the current look. Single compose
+  // selection only; a multi or focus panel gets no chips.
+  const themeInfo = useMemo(() => {
+    if (!composing || !selectedBlock || !selectedBlockManifest || multiSelectedBlock) {
+      return null
+    }
+    const detached = new Set(selectedBlock.detached ?? [])
+    const applied = applyThemeToValues(selectedBlockManifest, selectedBlock.values, theme, detached)
+    return {
+      themed: new Set(applied.themed.keys()),
+      detached,
+      resolved: applied.values,
+    }
+  }, [composing, selectedBlock, selectedBlockManifest, multiSelectedBlock, theme])
+
+  function handleDetachProp(name: string) {
+    if (!selectedBlock || !themeInfo) return
+    const value = themeInfo.resolved.props[name]
+    setComposition((prev) => detachProp(prev, selectedBlock.id, name, value as ControlValue))
+  }
+
+  function handleReattachProp(name: string) {
+    if (!selectedBlock) return
+    setComposition((prev) => reattachProp(prev, selectedBlock.id, name))
+  }
+
   // --- component-mode view lenses ---
   const device = deviceId ? DEVICES.find((entry) => entry.id === deviceId) ?? null : null
   const previewWidth = device?.width ?? null
@@ -1483,6 +1513,10 @@ export default function App() {
                 manifest={panelManifest}
                 values={panelValues}
                 note={panelNote}
+                themed={themeInfo?.themed}
+                detached={themeInfo?.detached}
+                onDetach={themeInfo ? handleDetachProp : undefined}
+                onReattach={themeInfo ? handleReattachProp : undefined}
                 onPropChange={handlePropChange}
                 onChildrenChange={handleChildrenChange}
                 onSlotPropChange={handleSlotPropChange}

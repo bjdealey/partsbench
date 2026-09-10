@@ -56,11 +56,13 @@ export function resolvedValues(
   fit: boolean,
   page: Composition['page'],
   theme: Theme | null,
+  /** Prop names this node has detached from the theme (Slice H part 3). */
+  detached?: ReadonlySet<string>,
 ): PlaygroundValues {
   const manifest = getManifest(componentName)
   if (!manifest) return values
 
-  const themed = applyThemeToValues(manifest, values, theme)
+  const themed = applyThemeToValues(manifest, values, theme, detached)
   const props = themed.values.props
 
   const width = manifest.props.find((control) => control.name === 'width')
@@ -236,6 +238,7 @@ export function generatePage(
       block.fit,
       composition.page,
       theme,
+      block.detached ? new Set(block.detached) : undefined,
     )
 
     for (const handler of handlerNames(manifest, values)) {

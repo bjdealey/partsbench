@@ -902,6 +902,8 @@ export function applyTheme(
   manifest: ComponentManifest,
   values: PropValues,
   theme: Theme | null,
+  /** Prop names this node has opted out of the theme (Slice H part 3). */
+  detached?: ReadonlySet<string>,
 ): ThemedProps {
   const props: PropValues = { ...values }
   const themed = new Map<string, ToggleToken>()
@@ -911,6 +913,8 @@ export function applyTheme(
   const { tokens, enabled } = theme
 
   for (const control of manifest.props) {
+    // A detached prop keeps its own value — the one per-node escape hatch.
+    if (detached?.has(control.name)) continue
     const role = roleOf(control, manifest.name)
     if (!role || !enabled[ROLE_TOKEN[role]]) continue
 
@@ -1098,8 +1102,10 @@ export function applyThemeToValues(
   manifest: ComponentManifest,
   values: PlaygroundValues,
   theme: Theme | null,
+  /** Top-level prop names this node has detached from the theme (Slice H part 3). */
+  detached?: ReadonlySet<string>,
 ): { values: PlaygroundValues; themed: Map<string, ToggleToken> } {
-  const { props, themed } = applyTheme(manifest, values.props, theme)
+  const { props, themed } = applyTheme(manifest, values.props, theme, detached)
   const slots: PlaygroundValues['slots'] = {}
 
   for (const [name, slot] of Object.entries(values.slots)) {

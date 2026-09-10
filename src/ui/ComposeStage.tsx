@@ -669,6 +669,7 @@ function Block({
     block.fit,
     composition.page,
     theme,
+    block.detached ? new Set(block.detached) : undefined,
   )
 
   const widthControl = manifest.props.find((control) => control.name === 'width')

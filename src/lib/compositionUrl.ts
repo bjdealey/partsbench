@@ -34,6 +34,8 @@ interface EncodedBlock {
   props?: Record<string, unknown>
   children?: string
   slots?: Record<string, { props?: Record<string, unknown>; children?: string }>
+  /** Prop names detached from the theme (Slice H part 3). Omitted when none. */
+  det?: string[]
 }
 
 interface EncodedContainer {
@@ -78,6 +80,7 @@ function encodeBlock(block: ComponentNode): EncodedBlock {
 
   if (block.rowSpan > 1) encoded.rows = block.rowSpan
   if (!block.fit) encoded.fit = false
+  if (block.detached && block.detached.length > 0) encoded.det = block.detached
   if (!manifest) return encoded
 
   const base = defaultValues(manifest)
@@ -193,6 +196,7 @@ function decodeBlock(encoded: EncodedBlock): ComponentNode | null {
     span: Math.min(12, Math.max(1, Number(encoded.span) || 12)),
     rowSpan: Math.max(1, Number(encoded.rows) || 1),
     fit: encoded.fit !== false,
+    detached: Array.isArray(encoded.det) && encoded.det.length > 0 ? encoded.det : undefined,
   }
 }
 
