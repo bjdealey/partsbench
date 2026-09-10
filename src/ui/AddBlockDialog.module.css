@@ -6,7 +6,7 @@
   align-items: flex-start;
   justify-content: center;
   padding: 88px 20px 20px;
-  background: rgba(15, 23, 42, 0.32);
+  background: var(--scrim);
   animation: scrimIn 0.15s ease;
 }
 

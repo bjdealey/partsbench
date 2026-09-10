@@ -3,6 +3,37 @@
 All notable changes to PartsBench are documented in this file. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Chrome identity retune — 2026-09-10
+
+The workbench **chrome** is re-pigmented from the stock cool-slate + indigo/violet
+palette into an authored **"drafting bench"** identity: warm graphite neutrals and
+a single grounded **Bench Cobalt** accent. The change is confined to the chrome
+(`src/styles/global.css`, `src/ui/`) — the ~90 previewed components and their theme
+presets (the *subject the workbench holds*) are untouched. Type-checked
+(`tsc --noEmit`) and built (`vite build`) green.
+
+### Changed
+
+- **Palette (light + dark).** Neutrals shifted from cool slate to warm graphite
+  (page `#f6f7f9` → `#f3f1ed`, ink `#17191c` → `#1c1a16`, warm borders); the accent
+  moved from purple-indigo `#4f46e5` to **Bench Cobalt** `#2c56cc` (`#7ea3f5` lifted
+  for dark). Elevation ink and the modal scrim are recut in the same warm graphite,
+  so light and dark read as one room. All contrast pairs re-checked to WCAG AA.
+- **Status colors** softened to sit on the warm ground (`danger`, `success`,
+  `warn-soft`), with a new `--danger-wash` for destructive-hover grounds.
+- **Design tokens.** Chrome color hardcodes are pulled into tokens — `--accent-ghost`
+  (the canvas block-hover outline, was a literal `rgba(79,70,229,…)`), `--scrim`, and
+  `--danger-wash` — so the accent and elevation now live in exactly one place.
+
+### Added
+
+- **Drawn brand mark.** The gradient placeholder square is replaced by a real mark:
+  a solid cobalt plate stamped with a `BrandMark` glyph — a part clamped between two
+  brackets — knocked out in `on-accent` so it adapts to light/dark. Drawn on the same
+  24-grid as the icon set (`src/ui/icons.tsx`).
+- **Drawn light/dark glyphs.** The `☀`/`☾` emoji in the theme toggle are replaced by
+  authored `sun`/`moon` line-icons, restoring one consistent drawn-icon language.
+
 ## Unified Workbench redesign — 2026-09-10
 
 The Gallery / Component / Compose modes are consolidated into **one

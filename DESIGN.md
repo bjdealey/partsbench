@@ -1,30 +1,32 @@
 ---
 name: PartsBench
-description: The neutral workbench chrome that holds your React components — grayscale, precise, indigo-accented.
+description: The neutral workbench chrome that holds your React components — warm graphite, precise, cobalt-accented.
 colors:
-  accent: "#4f46e5"
-  accent-deep: "#4338ca"
-  accent-soft: "#eef2ff"
-  accent-soft-hover: "#e6ebfe"
-  mark-violet: "#8b5cf6"
-  bg: "#f6f7f9"
+  accent: "#2c56cc"
+  accent-deep: "#2144a3"
+  accent-soft: "#e9edfa"
+  accent-soft-hover: "#dbe2f6"
+  accent-ghost: "rgba(44, 86, 204, 0.28)"
+  bg: "#f3f1ed"
   panel: "#ffffff"
-  panel-alt: "#fbfbfc"
-  border: "#e3e6ea"
-  border-strong: "#d3d8de"
-  switch-off: "#cbd2da"
-  text: "#17191c"
-  text-muted: "#6b7280"
-  text-faint: "#6b7280"
+  panel-alt: "#f6f4f0"
+  border: "#e6e1d9"
+  border-strong: "#d6d0c5"
+  switch-off: "#cdc7bc"
+  text: "#1c1a16"
+  text-muted: "#6a655c"
+  text-faint: "#6a655c"
   stage-light: "#ffffff"
   stage-dark: "#17181c"
-  scrim: "rgba(15, 23, 42, 0.32)"
-  danger: "#dc2626"
-  danger-soft: "#f1b4b4"
-  danger-muted: "#9a6a6a"
-  success: "#15803d"
+  canvas-dot: "#e7e2da"
+  scrim: "rgba(34, 27, 16, 0.34)"
+  danger: "#c2352c"
+  danger-soft: "#eab5b0"
+  danger-muted: "#94655f"
+  danger-wash: "#f6e1dd"
+  success: "#2f7d46"
   warn: "#b45309"
-  warn-soft: "#fef3c7"
+  warn-soft: "#fbeecb"
 typography:
   heading:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
@@ -125,8 +127,8 @@ cleanly along the edges — a sidebar of components, a controls panel, a theme
 rig, a code readout — and the work itself is clamped in the middle, lit evenly,
 with nothing around it competing for the eye. The chrome is quiet on purpose:
 its entire job is to hold whatever component you are examining and get out of
-its way. Every surface is a neutral gray or white; the one spot of color is a
-single indigo that marks what is *yours* — the selected item, the focused field,
+its way. Every surface is a warm graphite or white; the one spot of color is a
+single cobalt that marks what is *yours* — the selected item, the focused field,
 the active mode.
 
 The personality is **precise, dense, and unshowy**. Type is small and
@@ -144,12 +146,13 @@ the *workbench chrome* — the fixed, neutral shell in `src/styles/global.css` a
 variable** theme system (`src/lib/theme.ts`: 14 presets, light/dark derivation,
 a tokenized accent/surface/text/radius/spacing model). That theme layer is the
 *subject the workbench holds*, not the workbench's own identity — so its presets
-are not brand colors and must never leak into the chrome. The Default component
-theme happens to share the chrome's palette (`accent #4f46e5`, `text #17191c`),
-which is why the tool and an untouched preview feel like one world.
+are not brand colors and must never leak into the chrome. The chrome and the
+component themes are two independent layers: the chrome is warm-graphite with a
+Bench-Cobalt accent, while the Default preview preset keeps its own indigo
+(`accent #4f46e5`) — the frame and the picture, deliberately not the same paint.
 
 **Key Characteristics:**
-- Neutral grayscale chrome with a single indigo accent — the preview is the only color that matters.
+- Warm-graphite chrome with a single cobalt accent — the preview is the only color that matters.
 - Monospace for every identifier (component names, prop names, values, code).
 - Flat surfaces divided by hairline borders; shadow reserved for true elevation.
 - Compact, half-pixel typography (10.5–14px working range) and tabular numerals.
@@ -157,58 +160,66 @@ which is why the tool and an untouched preview feel like one world.
 
 ## Colors
 
-A near-monochrome workbench palette — cool grays from paper-white to near-black —
-lifted by exactly one indigo. Color is a status signal here, not decoration.
+A near-monochrome workbench palette — warm graphite from paper-white to near-black —
+lifted by exactly one cobalt. Color is a status signal here, not decoration. The
+neutrals carry a faint warmth (paper and anodized metal) so the one cool accent
+reads like drafting ink laid over the bench, not a stock brand tint.
 
 ### Primary
-- **Workbench Indigo** (`#4f46e5`): the single accent. Selected sidebar item,
-  focused field border, active mode label, slider fill, links, and the leading
-  stop of the logo mark. It is the color of *"this is the thing you're pointing
+- **Bench Cobalt** (`#2c56cc`): the single accent. Selected sidebar item,
+  focused field border, active mode label, slider fill, links, and the plate the
+  brand mark is stamped on. A grounded, drafting-ink blue — deliberately bluer and
+  cooler than a purple-indigo — that reads as *"this is the thing you're pointing
   at."* Used on a small fraction of any given screen — that restraint is the point.
-- **Indigo Deep** (`#4338ca`): the pressed/hover deepening of the accent, for the
+- **Cobalt Deep** (`#2144a3`): the pressed/hover deepening of the accent, for the
   rare filled accent control. A half-step darker, never a second brand hue.
-- **Indigo Wash** (`#eef2ff`): the accent at ~8% — the background of every
+- **Cobalt Wash** (`#e9edfa`): the accent at ~8% — the background of every
   selected/active row and the halo of the focus ring. The quiet half of the
   accent, doing most of the actual work.
-- **Indigo Wash Hover** (`#e6ebfe`): the wash pressed one step deeper — the hover
+- **Cobalt Wash Hover** (`#dbe2f6`): the wash pressed one step deeper — the hover
   ground of an already-active row (the borrowed-slot note). The only accent tint
   besides the wash itself.
-- **Mark Violet** (`#8b5cf6`): the trailing stop of the logo mark's gradient
-  (`135deg, #4f46e5 → #8b5cf6`). Appears *only* in the 15px brand square. It is
-  identity, not a UI color — do not paint anything else with it.
+- **Cobalt Ghost** (`rgba(44, 86, 204, 0.28)`): the accent at low alpha — the one
+  place it must sit *over* live content, as the outline a canvas block wears on hover.
+- **Brand mark**: a solid Bench-Cobalt plate (22px, 6px radius) stamped with a
+  drawn glyph — a part clamped between two brackets, the workbench in miniature.
+  The glyph knocks out in `on-accent`, so the mark adapts to light and dark rather
+  than carrying a second brand hue. It is identity, drawn in the same line-icon
+  language as the rest of the chrome — no gradient, no placeholder blob.
 
 ### Neutral
-- **Page** (`#f6f7f9`): the ground behind all panels; the cool gray the panels float on.
+- **Page** (`#f3f1ed`): the ground behind all panels; the warm paper the panels float on.
 - **Panel** (`#ffffff`): every working surface — header, sidebar, controls, right column.
-- **Panel Alt** (`#fbfbfc`): a barely-there recess for section headers, group bars, and value chips.
-- **Border** (`#e3e6ea`): the hairline that separates almost everything. This system draws with lines.
-- **Border Strong** (`#d3d8de`): the slightly firmer edge of an *interactive* field (input, select, swatch), so controls read as touchable.
-- **Switch Off** (`#cbd2da`): the toggle track in its off state — one step softer than Border Strong, so an off switch reads as an empty track, not a bordered one.
-- **Text** (`#17191c`): primary near-black ink.
-- **Text Muted** (`#6b7280`): secondary copy, descriptions, resting control labels.
-- **Text Faint** (`#6b7280`): section eyebrows, counts, hints, placeholder — the quietest *role*. Its ink matches Text Muted deliberately: on a near-white chrome there is no lighter tint that still clears WCAG AA (the former `#9aa1ab` read at ~2.6:1), so the quiet now comes from small size, uppercase, and tracking — not pale ink.
-- **Scrim** (`rgba(15, 23, 42, 0.32)`): the dim behind a modal, and the same translucent slate ink used for the rare hairline (the theme preset dots). The cool-slate shadow ink, made visible.
+- **Panel Alt** (`#f6f4f0`): a barely-there warm recess for section headers, group bars, and value chips.
+- **Border** (`#e6e1d9`): the warm hairline that separates almost everything. This system draws with lines.
+- **Border Strong** (`#d6d0c5`): the slightly firmer edge of an *interactive* field (input, select, swatch), so controls read as touchable.
+- **Switch Off** (`#cdc7bc`): the toggle track in its off state — one step softer than Border Strong, so an off switch reads as an empty track, not a bordered one.
+- **Text** (`#1c1a16`): primary warm near-black ink.
+- **Text Muted** (`#6a655c`): secondary copy, descriptions, resting control labels.
+- **Text Faint** (`#6a655c`): section eyebrows, counts, hints, placeholder — the quietest *role*. Its ink matches Text Muted deliberately: on a warm-white chrome there is no lighter tint that still clears WCAG AA, so the quiet comes from small size, uppercase, and tracking — not pale ink.
+- **Scrim** (`rgba(34, 27, 16, 0.34)`): the dim behind a modal — the same warm graphite ink the shadows are cut from, made visible, so elevation reads as one material with the ground.
 
 ### Status (state only — never brand)
-- **Danger** (`#dc2626`): destructive/failed state and error boundaries (`PreviewBoundary`, error rows). The one warm color allowed, and only to mean *something went wrong*.
-- **Danger Soft** (`#f1b4b4`) / **Danger Muted** (`#9a6a6a`): the error boundary's border tint and its secondary text — a desaturated red pair, so a caught error reads as *contained* rather than alarming.
-- **Success** (`#15803d`): an added line in the code diff; healthy state. Green as *"this is fine."*
-- **Warn** (`#b45309`) on **Warn Soft** (`#fef3c7`): the amber pair for the fit button's *capped* state — the fit is correct but stopped short of the cell. Amber because it is usually the right answer, just not an obvious one.
-- Status colors are feedback only — never surfaces, accents, or repainted in the brand indigo.
+- **Danger** (`#c2352c`): destructive/failed state and error boundaries (`PreviewBoundary`, error rows). The one warm-red allowed, and only to mean *something went wrong*.
+- **Danger Soft** (`#eab5b0`) / **Danger Muted** (`#94655f`): the error boundary's border tint and its secondary text — a desaturated red pair, so a caught error reads as *contained* rather than alarming.
+- **Danger Wash** (`#f6e1dd`): the warm-red ground a destructive control takes on hover (remove, ungroup) — hot enough to warn, tuned to the warm bench so it never turns candy-pink.
+- **Success** (`#2f7d46`): an added line in the code diff; healthy state. Green as *"this is fine."*
+- **Warn** (`#b45309`) on **Warn Soft** (`#fbeecb`): the amber pair for the fit button's *capped* state — the fit is correct but stopped short of the cell. Amber because it is usually the right answer, just not an obvious one.
+- Status colors are feedback only — never surfaces, accents, or repainted in the brand cobalt.
 
 ### Named Rules
-**The Neutral Chrome Rule.** The workbench is grayscale plus one indigo. New tool
+**The Neutral Chrome Rule.** The workbench is warm graphite plus one cobalt. New tool
 UI introduces **no** competing color. If a surface needs emphasis, it uses the
-indigo or the indigo wash — never a new hue. The previewed components and their
+cobalt or the cobalt wash — never a new hue. The previewed components and their
 themes are the only real color on screen, and the chrome must never compete with
 the work it is holding.
 
-**The One Accent Rule.** Indigo marks *selection, focus, and the active choice* —
+**The One Accent Rule.** Cobalt marks *selection, focus, and the active choice* —
 nothing else. If everything is accented, nothing is. Keep it on well under ~10%
 of any screen.
 
 **The Status-Isn't-Brand Rule.** Red/green/amber mean success and failure. Never
-repaint a status color in the brand indigo, and never use the brand indigo to
+repaint a status color in the brand cobalt, and never use the brand cobalt to
 signal an error.
 
 ## Typography
@@ -280,15 +291,16 @@ can't see while working.
 **Flat by default; depth is a signal, not a texture.** Surfaces sit at rest with
 **no shadow at all** — they are told apart by 1px borders and the faint
 panel/panel-alt/page value steps. Shadow is spent only where something has
-genuinely left the plane, and always in the same cool slate ink
-(`rgba(15, 23, 42, …)`) so elevation reads as one material.
+genuinely left the plane, and always in the same warm graphite ink
+(`rgba(40, 32, 20, …)`, cut from the same warmth as the ground) so elevation reads
+as one material.
 
 ### Shadow Vocabulary
-- **Seated** (`0 1px 2px rgba(15,23,42,0.08)`): the active segment of the mode switch and small raised buttons — barely off the surface.
-- **Dropdown** (`0 2px 8px rgba(15,23,42,0.14)`): menus and popovers opening over content.
-- **Floating card** (`0 1px 3px rgba(15,23,42,0.1), 0 8px 28px rgba(15,23,42,0.07)`): a lifted panel, two-layer for a soft ambient cast.
-- **Dialog** (`0 16px 48px rgba(15,23,42,0.24)`): modal dialogs, decisively above everything.
-- **Switch knob** (`0 1px 2px rgba(15,23,42,0.3)`): the one physical touch — a toggle handle that reads as a real object riding its track.
+- **Seated** (`0 1px 2px rgba(40,32,20,0.09)`): the active segment of the mode switch and small raised buttons — barely off the surface.
+- **Dropdown** (`0 2px 8px rgba(40,32,20,0.15)`): menus and popovers opening over content.
+- **Floating card** (`0 1px 3px rgba(40,32,20,0.1), 0 8px 24px -6px rgba(40,32,20,0.14)`): a lifted panel, two-layer for a soft ambient cast.
+- **Dialog** (`0 18px 50px rgba(30,24,14,0.26)`): modal dialogs, decisively above everything.
+- **Switch knob** (`0 1px 2px rgba(40,32,20,0.3)`): the one physical touch — a toggle handle that reads as a real object riding its track.
 
 ### Named Rules
 **The Flat-By-Default Rule.** Resting surfaces are flat and border-separated. A
@@ -308,8 +320,11 @@ Iconography is spare and *drawn*: disclosure is a **CSS-triangle chevron** (a 4p
 left-border wedge) that rotates 90° on open, and the Compose block actions carry a
 single **thin-line SVG icon set** — 1.35px `currentColor` strokes on a 14px grid
 (row-span, fit-width, move, duplicate, remove) — cut to the same precision rather
-than pulled from an icon font. Fields are outlined rather than filled — a
-`border-strong` stroke on a `panel` ground — so an input always looks like an input.
+than pulled from an icon font. The **brand mark** and the **light/dark switch** are
+drawn in this same hand — a bracketed-part glyph knocked out of the cobalt plate, a
+sun and a moon on the toggle — never an emoji or a gradient. Fields are outlined
+rather than filled — a `border-strong` stroke on a `panel` ground — so an input
+always looks like an input.
 
 ## Components
 
@@ -330,7 +345,7 @@ than pulled from an icon font. Fields are outlined rather than filled — a
 - **Value display:** the current value rides in a mono chip (`panel-alt`, 1px border, `4px` radius) in the field header.
 
 ### Switch (toggle)
-- A `40×23px` `pill` track (`#cbd2da` off → `accent` on) with a `17px` white knob that carries the *Switch knob* shadow and slides `17px` on check. Built on a visually-hidden real checkbox, so it stays in the accessibility tree; focus paints a 2px accent outline on the track.
+- A `40×23px` `pill` track (`#cdc7bc` off → `accent` on) with a `17px` white knob that carries the *Switch knob* shadow and slides `17px` on check. Built on a visually-hidden real checkbox, so it stays in the accessibility tree; focus paints a 2px accent outline on the track.
 
 ### Navigation (sidebar)
 - **Filter:** an outlined search at the top; pressing `/` anywhere jumps focus to it, and the empty, unfocused field shows a small mono `/` hint so the shortcut is discoverable.
@@ -350,7 +365,7 @@ than pulled from an icon font. Fields are outlined rather than filled — a
 - The **reach readout** (an `accent-soft` note, *"Governing N values across M components"*) is the panel's gauge: the counts **roll** to their new figure — a ~`280ms` ease-out, snapping under reduced motion — whenever a toggle changes how far the theme reaches. It is the product's core claim, made legible.
 
 ### Overlays (Add-block dialog · Command menu)
-- A centered modal on a `scrim` (`rgba(15,23,42,0.32)`), carrying the *Dialog* shadow and `12px` radius, top-anchored so it opens within the cursor's reach. Both overlays share one **keyboard-first idiom** — open focused on a search, type to filter, arrows to move, Enter to act, Escape to close — with the list using the same `accent-soft` active/hover language as the sidebar.
+- A centered modal on a `scrim` (`rgba(34,27,16,0.34)`), carrying the *Dialog* shadow and `12px` radius, top-anchored so it opens within the cursor's reach. Both overlays share one **keyboard-first idiom** — open focused on a search, type to filter, arrows to move, Enter to act, Escape to close — with the list using the same `accent-soft` active/hover language as the sidebar.
 - **Command menu (⌘K):** the tool's jump-anywhere palette — a `Go` group (mode, add-component) over every component (mono name + faint category), reached by `⌘K` or a quiet mono affordance beside the wordmark. The Add-block dialog is the same idiom scoped to picking components.
 - **Entrance:** both settle in with the *overlay entrance* — the scrim fades (`0.15s`) while the panel rises and scales from `0.985` (`0.18s`, `cubic-bezier(0.16, 1, 0.3, 1)`); reduced motion keeps the fade and drops the movement. Exit is instant — the modal simply unmounts.
 
@@ -360,7 +375,7 @@ than pulled from an icon font. Fields are outlined rather than filled — a
 ## Do's and Don'ts
 
 ### Do:
-- **Do** keep new chrome grayscale + the single indigo. Reach for `accent` (emphasis) or `accent-soft` (selected/active ground) before any new color.
+- **Do** keep new chrome warm graphite + the single cobalt. Reach for `accent` (emphasis) or `accent-soft` (selected/active ground) before any new color.
 - **Do** set every identifier — component names, prop keys, values, code — in the monospace face, and everything about them in sans.
 - **Do** mark selection and focus with the established idioms: `accent-soft` background + `accent` text for active items, and the `0 0 0 3px accent-soft` ring on focused fields.
 - **Do** separate resting surfaces with 1px `border` lines and the panel/panel-alt/page value steps — reserve shadow for things that truly lift.
@@ -369,7 +384,7 @@ than pulled from an icon font. Fields are outlined rather than filled — a
 
 ### Don't:
 - **Don't** introduce a second brand hue or paint chrome with the previewed components' theme colors. The chrome is the frame, not the picture.
-- **Don't** use `mark-violet` (`#8b5cf6`) anywhere but the logo mark's gradient, and don't repaint status red/green/amber in the accent (or vice versa).
+- **Don't** give the brand mark a second hue or a gradient — it is the cobalt plate plus a knocked-out glyph, nothing more — and don't repaint status red/green/amber in the accent (or vice versa).
 - **Don't** drop shadows on static panels, or replace the hairline-border separation with elevation.
 - **Don't** enlarge the type into a marketing hierarchy — there is no hero; 16px is the ceiling.
 - **Don't** proliferate breakpoints or fork the IA. The chrome has exactly **one** width breakpoint (900px: grid → one-at-a-time tabs) plus input-method (`pointer: coarse`) sizing on top — nothing more. The desktop pane grid is the home; make new chrome work there first, let it become one of the mobile tabs below the breakpoint, and never build a second, different mobile information architecture.

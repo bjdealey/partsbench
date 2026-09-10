@@ -222,7 +222,7 @@
 }
 
 .delete:hover {
-  background: #fee2e2;
+  background: var(--danger-wash);
   color: var(--danger);
 }
 
