@@ -74,7 +74,7 @@ const MODES: { id: Mode; label: string; hint: string }[] = [
 ]
 
 /** The three layout regions become tabs on a narrow screen. */
-type MobileTab = 'list' | 'view' | 'edit'
+type MobileTab = 'left' | 'center' | 'right'
 
 /** Tracks a media query, so the layout can switch to tabs below the breakpoint. */
 function useMediaQuery(query: string): boolean {
@@ -146,7 +146,7 @@ export default function App() {
   // wide screen (the tab bar isn't rendered there), so the tab-switches below
   // don't need to guard on width.
   const isMobile = useMediaQuery('(max-width: 899px)')
-  const [mobileTab, setMobileTab] = useState<MobileTab>('view')
+  const [mobileTab, setMobileTab] = useState<MobileTab>('center')
 
   // The left rail. On desktop it docks as a persistent column, open by default and
   // collapsed from the header hamburger. On mobile it is an overlay drawer, hidden
@@ -154,20 +154,15 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(
     () => !window.matchMedia('(max-width: 899px)').matches,
   )
-  const [mobileControlsOpen, setMobileControlsOpen] = useState(false)
 
   // On a phone, drilling into a component is a fresh screen: close the overlay
   // drawer and the controls sheet whenever the shown component or the mode
   // changes. The desktop docked rail stays put — it is persistent, not an overlay.
   useEffect(() => {
-    if (isMobile) {
-      setDrawerOpen(false)
-      setMobileControlsOpen(false)
-    }
     // The contact sheet is a lens on the component in front of you; drop it when
-    // that component or the mode changes so each lands on the single preview.
+    // that component or the mode changes.
     setContact(false)
-  }, [selected, mode, isMobile])
+  }, [selected, mode])
 
   // Escape closes the list drawer, the way it dismisses any overlay.
   useEffect(() => {
@@ -393,7 +388,7 @@ export default function App() {
     setMode('component')
     setSelected(name)
     // On the phone the detail opens straight to the preview, not the list tab.
-    setMobileTab('view')
+    setMobileTab('center')
   }
 
   /* ---------------- editing ---------------- */
@@ -726,7 +721,7 @@ export default function App() {
           setInteractive(false)
           setMode('component')
           setSelected(entry.name)
-          setMobileTab('view')
+          setMobileTab('center')
         },
       })),
     ],
@@ -789,26 +784,19 @@ export default function App() {
 
   const bare = composing && interactive
 
-  // On a phone the panes stop docking side by side. Compose keeps a small tab
-  // bar (Canvas / Controls); the gallery-and-component flow drills in instead —
-  // the grid opens a component's preview, left again with a Back button, while
-  // the component list and the controls arrive as overlays over it.
-  const tabbed = isMobile && composing && !bare
-  const activeTab: MobileTab = mobileTab === 'list' ? 'view' : mobileTab
+  // On mobile the shell collapses to one region at a time, switched from a bottom
+  // tab bar — Left (rail) · Center (preview/canvas/grid) · Right (inspector). The
+  // same three tabs in every mode; interact (bare) drops the chrome entirely.
+  const tabbed = isMobile && !bare
+  const leftHidden = isMobile && mobileTab !== 'left' ? styles.paneHidden : ''
+  const centerHidden = isMobile && mobileTab !== 'center' ? styles.paneHidden : ''
+  const rightHidden = isMobile && mobileTab !== 'right' ? styles.paneHidden : ''
 
-  // Component mode on a phone is a single drilled-in preview. The controls ride
-  // up as a bottom sheet — from that view's own toggle, or the compose tab — and
-  // the code and event log fold away beneath the preview while it's up.
-  const mobilePreview = isMobile && !composing
-  const controlsOpen = isMobile && (composing ? activeTab === 'edit' : mobileControlsOpen)
-  const rightHidden = !isMobile || controlsOpen ? '' : styles.paneHidden
-
-  // Unified shell: one grid for every mode. The left rail (component list, or the
-  // compose block outline) docks as the first column on desktop and collapses from
-  // the header hamburger. On mobile the rail keeps its overlay-drawer behaviour
-  // (the mobile IA is unified in a follow-up), so it is never a docked column there.
+  // The left rail: a docked, collapsible column on desktop; on mobile it is one of
+  // the three tabs, so it always renders there (hidden unless the Left tab is up).
   const RAIL_W = 232
   const showRail = !isMobile && drawerOpen && !bare
+  const renderRail = !bare && (isMobile || (drawerOpen && !isMobile))
   const columns = bare
     ? 'minmax(0, 1fr)'
     : `${showRail ? `${RAIL_W}px ` : ''}minmax(0, 1fr) ${SPLITTER}px ${rightPane.size}px`
@@ -881,7 +869,7 @@ export default function App() {
     <div className={styles.app}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          {!(isMobile && composing) && (
+          {!isMobile && (
             <button
               type="button"
               className={styles.hamburger}
@@ -930,7 +918,7 @@ export default function App() {
                 setInteractive(false)
                 setMode('component')
                 setSelected(name)
-                setMobileTab('view')
+                setMobileTab('center')
               }}
             />
           )}
@@ -956,35 +944,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* The component list, hidden by default on gallery and component, opened
-          over the content as a left drawer from the header hamburger — the same
-          overlay on every width now, not only the phone. Compose has no list. */}
-      {isMobile && !composing && (
-        <>
-          <div
-            className={`${styles.scrim} ${drawerOpen ? styles.scrimShown : ''}`}
-            onClick={() => setDrawerOpen(false)}
-            aria-hidden="true"
-          />
-          <aside
-            className={`${styles.drawer} ${drawerOpen ? styles.drawerOpen : ''}`}
-            aria-label="Components"
-            aria-hidden={!drawerOpen}
-          >
-            <Sidebar
-              manifests={manifests}
-              selected={activeName}
-              onSelect={(name) => {
-                setSelected(name)
-                setMode('component')
-                setDrawerOpen(false)
-              }}
-              onStep={handleStep}
-            />
-          </aside>
-        </>
-      )}
-
       {manifests.length === 0 ? (
         <div className={styles.empty}>
           <h2 className={styles.emptyTitle}>No components registered</h2>
@@ -994,63 +953,38 @@ export default function App() {
             manifest. The registry picks it up automatically.
           </p>
         </div>
-      ) : isMobile && mode === 'gallery' ? (
-        // Mobile keeps the standalone gallery for now; the mobile IA is unified next.
-        <Gallery
-          manifests={manifests}
-          onOpen={openComponent}
-          design={designActive ? theme : null}
-          onRandomize={() => randomizeGlobalDesign(stageTheme)}
-        />
       ) : (
         <div
           className={styles.layout}
           style={{ gridTemplateColumns: columns }}
         >
-          {showRail &&
+          {renderRail &&
             (composing ? (
               <BlockOutline
+                className={leftHidden}
                 composition={composition}
                 selectedId={selectedBlockId}
-                onSelect={setSelectedBlockId}
+                onSelect={(id) => {
+                  setSelectedBlockId(id)
+                  if (isMobile) setMobileTab('center')
+                }}
                 onAdd={() => setPicking(true)}
               />
             ) : (
               <Sidebar
+                className={leftHidden}
                 manifests={manifests}
                 selected={activeName}
                 onSelect={(name) => {
                   setSelected(name)
                   setMode('component')
+                  if (isMobile) setMobileTab('center')
                 }}
                 onStep={handleStep}
               />
             ))}
 
-          <main className={styles.center}>
-            {mobilePreview && (
-              <div className={styles.mobileBar}>
-                <button
-                  type="button"
-                  className={styles.mobileBack}
-                  onClick={() => setMode('gallery')}
-                >
-                  <Glyph name="chevronLeft" />
-                  Gallery
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.mobileControlsToggle} ${
-                    mobileControlsOpen ? styles.mobileControlsToggleOn : ''
-                  }`}
-                  aria-pressed={mobileControlsOpen}
-                  onClick={() => setMobileControlsOpen((o) => !o)}
-                >
-                  <Glyph name="sliders" />
-                  Controls
-                </button>
-              </div>
-            )}
+          <main className={`${styles.center} ${centerHidden}`}>
             {mode === 'gallery' ? (
               <Gallery
                 manifests={manifests}
@@ -1122,9 +1056,7 @@ export default function App() {
               // Component and Compose share one collapsible output drawer
               // (Code · Events), closed by default so the preview/canvas leads.
               <div
-                className={`${styles.output} ${outputOpen ? styles.outputOpen : ''} ${
-                  controlsOpen ? styles.paneHidden : ''
-                }`}
+                className={`${styles.output} ${outputOpen ? styles.outputOpen : ''}`}
               >
                 <div className={styles.outputBar}>
                   <div className={styles.outputTabs} role="tablist" aria-label="Output">
@@ -1280,25 +1212,27 @@ export default function App() {
       )}
 
       {tabbed && (
-        <nav className={styles.mobileTabs} aria-label="Panel">
-          {(composing
-            ? [
-                { id: 'view' as const, label: 'Canvas', icon: 'canvas' },
-                { id: 'edit' as const, label: 'Controls', icon: 'sliders' },
-              ]
-            : [
-                { id: 'list' as const, label: 'Components', icon: 'list' },
-                { id: 'view' as const, label: 'Preview', icon: 'eye' },
-                { id: 'edit' as const, label: 'Controls', icon: 'sliders' },
-              ]
-          ).map((tab) => (
+        <nav className={styles.mobileTabs} aria-label="Region">
+          {[
+            { id: 'left' as const, label: composing ? 'Blocks' : 'Components', icon: 'list' },
+            {
+              id: 'center' as const,
+              label: mode === 'gallery' ? 'Gallery' : composing ? 'Canvas' : 'Preview',
+              icon: composing ? 'canvas' : 'eye',
+            },
+            {
+              id: 'right' as const,
+              label: mode === 'gallery' ? 'Theme' : 'Controls',
+              icon: 'sliders',
+            },
+          ].map((tab) => (
             <button
               key={tab.id}
               type="button"
               className={`${styles.mobileTab} ${
-                activeTab === tab.id ? styles.mobileTabActive : ''
+                mobileTab === tab.id ? styles.mobileTabActive : ''
               }`}
-              aria-pressed={activeTab === tab.id}
+              aria-pressed={mobileTab === tab.id}
               onClick={() => setMobileTab(tab.id)}
             >
               <Glyph name={tab.icon} className={styles.mobileTabIcon} />
