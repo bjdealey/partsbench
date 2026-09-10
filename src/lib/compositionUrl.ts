@@ -1,4 +1,4 @@
-import type { Composition, CompositionBlock, PageSettings } from './composition'
+import type { Composition, ComponentNode, Node, PageSettings } from './composition'
 import { DEFAULT_PAGE, blockId } from './composition'
 import type {
   Theme,
@@ -36,11 +36,32 @@ interface EncodedBlock {
   slots?: Record<string, { props?: Record<string, unknown>; children?: string }>
 }
 
+interface EncodedContainer {
+  /** Discriminator — a leaf EncodedBlock carries no `k`. */
+  k: 'container'
+  dir: 'row' | 'column'
+  gap: number
+  align: 'start' | 'center' | 'end' | 'stretch'
+  pad: number
+  span: number
+  /** Omitted when 1. */
+  rows?: number
+  children: EncodedNode[]
+}
+
+type EncodedNode = EncodedBlock | EncodedContainer
+
 interface EncodedComposition {
   scene: string
   page: PageSettings
   theme: Theme
-  blocks: EncodedBlock[]
+  /**
+   * A flat page (no containers) is still written under `blocks`, byte-identical
+   * to before the tree existed — so every link made until now keeps working.
+   */
+  blocks?: EncodedBlock[]
+  /** The node tree — written only once a page contains a container. */
+  root?: EncodedNode[]
 }
 
 function diffProps(base: PropValues, live: PropValues): Record<string, unknown> {
@@ -51,7 +72,7 @@ function diffProps(base: PropValues, live: PropValues): Record<string, unknown> 
   return diff
 }
 
-function encodeBlock(block: CompositionBlock): EncodedBlock {
+function encodeBlock(block: ComponentNode): EncodedBlock {
   const manifest = getManifest(block.component)
   const encoded: EncodedBlock = { c: block.component, span: block.span }
 
@@ -84,12 +105,35 @@ function encodeBlock(block: CompositionBlock): EncodedBlock {
   return encoded
 }
 
+function encodeNode(node: Node): EncodedNode {
+  if (node.kind === 'component') return encodeBlock(node)
+
+  const encoded: EncodedContainer = {
+    k: 'container',
+    dir: node.direction,
+    gap: node.gap,
+    align: node.align,
+    pad: node.padding,
+    span: node.span,
+    children: node.children.map(encodeNode),
+  }
+  if (node.rowSpan > 1) encoded.rows = node.rowSpan
+  return encoded
+}
+
 export function writeComposeUrl(composition: Composition, theme: Theme): void {
+  // A page with no containers is written the old way, under `blocks`, so the
+  // encoded string is byte-identical to what earlier versions produced and no
+  // existing link changes. A container tips the whole page over to `root`.
+  const flat = composition.root.every((node) => node.kind === 'component')
+
   const payload: EncodedComposition = {
     scene: composition.name,
     page: composition.page,
     theme,
-    blocks: composition.blocks.map(encodeBlock),
+    ...(flat
+      ? { blocks: composition.root.map((node) => encodeBlock(node as ComponentNode)) }
+      : { root: composition.root.map(encodeNode) }),
   }
 
   const hash = `#${COMPOSE_ROUTE}/${encodePayload(payload)}`
@@ -106,7 +150,7 @@ export function writeComposeUrl(composition: Composition, theme: Theme): void {
  * degrades to that component's current defaults rather than injecting values it
  * can no longer render.
  */
-function decodeBlock(encoded: EncodedBlock): CompositionBlock | null {
+function decodeBlock(encoded: EncodedBlock): ComponentNode | null {
   const manifest = getManifest(encoded.c)
   if (!manifest) {
     console.warn(`[compose] link refers to unregistered component "${encoded.c}".`)
@@ -137,6 +181,7 @@ function decodeBlock(encoded: EncodedBlock): CompositionBlock | null {
   }
 
   return {
+    kind: 'component',
     id: blockId(),
     component: encoded.c,
     values,
@@ -144,6 +189,36 @@ function decodeBlock(encoded: EncodedBlock): CompositionBlock | null {
     rowSpan: Math.max(1, Number(encoded.rows) || 1),
     fit: encoded.fit !== false,
   }
+}
+
+const ALIGNMENTS = ['start', 'center', 'end', 'stretch'] as const
+
+function isEncodedContainer(node: EncodedNode): node is EncodedContainer {
+  return (node as EncodedContainer).k === 'container'
+}
+
+/** Rebuilds any node from its encoded form; leaves that no longer resolve drop out. */
+function decodeNode(encoded: EncodedNode): Node | null {
+  if (isEncodedContainer(encoded)) {
+    const children = (Array.isArray(encoded.children) ? encoded.children : [])
+      .map(decodeNode)
+      .filter((node): node is Node => node !== null)
+
+    return {
+      kind: 'container',
+      id: blockId(),
+      direction: encoded.dir === 'row' ? 'row' : 'column',
+      gap: Number.isFinite(encoded.gap) ? Number(encoded.gap) : 12,
+      align: ALIGNMENTS.includes(encoded.align) ? encoded.align : 'stretch',
+      padding: Number.isFinite(encoded.pad) ? Number(encoded.pad) : 0,
+      span: Math.min(12, Math.max(1, Number(encoded.span) || 12)),
+      rowSpan: Math.max(1, Number(encoded.rows) || 1),
+      fit: false,
+      children,
+    }
+  }
+
+  return decodeBlock(encoded)
 }
 
 /** Fills in anything a stored theme is missing, so an older link still loads. */
@@ -215,11 +290,16 @@ export function readComposeUrl(): ParsedComposeUrl | null {
   if (!encoded) return null
 
   const payload = decodePayload<EncodedComposition>(encoded)
-  if (!payload || !Array.isArray(payload.blocks)) return null
+  if (!payload || (!Array.isArray(payload.root) && !Array.isArray(payload.blocks))) {
+    return null
+  }
 
-  const blocks = payload.blocks
-    .map(decodeBlock)
-    .filter((block): block is CompositionBlock => block !== null)
+  // Prefer the tree; fall back to a legacy flat `blocks` link.
+  const root: Node[] = Array.isArray(payload.root)
+    ? payload.root.map(decodeNode).filter((node): node is Node => node !== null)
+    : (payload.blocks ?? [])
+        .map(decodeBlock)
+        .filter((node): node is ComponentNode => node !== null)
 
   const page: PageSettings = { ...DEFAULT_PAGE, ...(payload.page ?? {}) }
 
@@ -227,7 +307,7 @@ export function readComposeUrl(): ParsedComposeUrl | null {
     composition: {
       name: typeof payload.scene === 'string' ? payload.scene : 'Custom',
       page,
-      blocks,
+      root,
     },
     theme: reviveTheme(payload.theme, page.background),
   }

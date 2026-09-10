@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  :root{
+    --bg:#0e0f11;--chrome:#17181c;--panel:#1d1f24;--panel2:#242730;--line:#2b2e35;--line2:#3a3e46;
+    --text:#e7e9ec;--muted:#9aa0aa;--faint:#6b7280;--accent:#818cf8;--accentDeep:#6366f1;--accentSoft:rgba(129,140,248,.14);--good:#34d399;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.4}
+  a{color:var(--accent)}a:hover{color:var(--accentDeep)}
+  .frame{display:flex;flex-direction:column;background:var(--bg);overflow:hidden;position:relative}
+  .tbar{display:flex;align-items:center;gap:16px;height:52px;padding:0 14px;background:var(--chrome);border-bottom:1px solid var(--line);flex:0 0 auto}
+  .tb-left,.tb-right{display:flex;align-items:center;gap:9px}
+  .brand{font-weight:600;letter-spacing:-.01em}
+  .kbar{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--muted);font-size:12px;flex:1;max-width:280px}
+  .spacer{flex:1}
+  .btn{height:30px;padding:0 11px;display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--text);font-size:12px}
+  .ico{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:var(--muted);flex:0 0 auto}
+  .body{flex:1;display:flex;min-height:0}
+  .rail,.inspector{width:250px;flex:0 0 auto;background:var(--chrome);padding:14px}
+  .inspector{width:302px;border-left:1px solid var(--line)}
+  .rail{border-right:1px solid var(--line)}
+  .stage{flex:1;padding:26px;display:flex;justify-content:center}
+  .skel{width:100%;max-width:900px;height:100%;background:#101319;border:1px solid var(--line);border-radius:10px}
+  .skline{height:12px;background:var(--panel2);border-radius:4px;margin-bottom:10px}
+  .scrim{position:absolute;inset:0;background:rgba(4,6,10,.66)}
+  .modal{position:absolute;left:300px;top:150px;width:760px;background:var(--chrome);border:1px solid var(--line2);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
+  .mhead{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line)}
+  .mtitle{font-weight:600;font-size:14px}
+  .mtabs{display:flex;gap:6px;margin-left:6px}
+  .mtabs span{padding:6px 11px;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:7px}
+  .mtabs .on{background:var(--accentSoft);color:var(--text);border-color:var(--accentDeep)}
+  .mact{display:flex;gap:8px}
+  .x{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:7px;color:var(--muted)}
+  .libgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:18px}
+  .libcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .libthumb{height:104px;background:#101319;border-bottom:1px solid var(--line);padding:10px;display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:18px;gap:5px}
+  .libthumb i{background:var(--panel2);border-radius:3px;border:1px solid var(--line2);display:block}
+  .libmeta{padding:10px 12px}
+  .libmeta .nm{font-size:12.5px}
+  .libmeta .dt{font-size:10.5px;color:var(--faint);margin-top:3px;display:flex;align-items:center;gap:6px}
+  .badge{font-size:9.5px;background:var(--accentSoft);color:var(--accent);border:1px solid var(--accentDeep);border-radius:20px;padding:1px 7px}
+  .newcard{border:1px dashed var(--line2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px;background:transparent;min-height:150px}
+  .mfoot{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--line);color:var(--faint);font-size:11.5px}
+</style>
+</helmet>
+<div class="frame" style="width:1360px;height:860px">
+  <div class="tbar">
+    <div class="tb-left"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="brand">PartsBench</span></div>
+    <div class="kbar"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg> Search or ⌘K</div>
+    <div class="spacer"></div>
+    <div class="btn"><svg class="ico" viewBox="0 0 24 24" style="color:#fff"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7"/></svg> Save</div>
+  </div>
+  <div class="body">
+    <div class="rail"><div class="skline" style="width:70%"></div><div class="skline" style="width:100%;height:60px"></div><div class="skline" style="width:100%;height:60px"></div></div>
+    <div class="stage"><div class="skel"></div></div>
+    <div class="inspector"><div class="skline" style="width:60%"></div><div class="skline" style="width:100%"></div><div class="skline" style="width:100%"></div><div class="skline" style="width:80%"></div></div>
+  </div>
+  <div class="scrim"></div>
+  <div class="modal">
+    <div class="mhead">
+      <span class="mtitle">My Library</span>
+      <div class="mtabs"><span class="on">Compositions</span><span>Published components</span></div>
+      <div class="spacer"></div>
+      <div class="mact">
+        <div class="btn"><svg class="ico" viewBox="0 0 24 24"><path d="M9 15l6-6"/><path d="M10.5 6l1-1a4 4 0 0 1 6 6l-1 1"/><path d="M13.5 18l-1 1a4 4 0 0 1-6-6l1-1"/></svg> Open from link</div>
+        <div class="x"><svg class="ico" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+      </div>
+    </div>
+    <div class="libgrid">
+      <div class="libcard">
+        <div class="libthumb"><i style="grid-column:span 6"></i><i style="grid-column:span 2"></i><i style="grid-column:span 2"></i><i style="grid-column:span 2"></i><i style="grid-column:span 6"></i></div>
+        <div class="libmeta"><div class="nm">Analytics dashboard</div><div class="dt">edited 2h ago · 7 nodes</div></div>
+      </div>
+      <div class="libcard">
+        <div class="libthumb"><i style="grid-column:span 3"></i><i style="grid-column:span 3"></i><i style="grid-column:span 6"></i><i style="grid-column:span 4"></i><i style="grid-column:span 2"></i></div>
+        <div class="libmeta"><div class="nm">Settings page</div><div class="dt">yesterday · 5 nodes</div></div>
+      </div>
+      <div class="libcard">
+        <div class="libthumb"><i style="grid-column:span 6"></i><i style="grid-column:span 6"></i><i style="grid-column:span 6"></i></div>
+        <div class="libmeta"><div class="nm">Pricing hero</div><div class="dt"><span class="badge">from link</span> imported</div></div>
+      </div>
+      <div class="libcard">
+        <div class="libthumb"><i style="grid-column:span 2"></i><i style="grid-column:span 2"></i><i style="grid-column:span 2"></i><i style="grid-column:span 6"></i></div>
+        <div class="libmeta"><div class="nm">Button — brand</div><div class="dt">single node · was a Variant</div></div>
+      </div>
+      <div class="libcard">
+        <div class="libthumb"><i style="grid-column:span 4"></i><i style="grid-column:span 4"></i><i style="grid-column:span 4"></i><i style="grid-column:span 12"></i></div>
+        <div class="libmeta"><div class="nm">Onboarding flow</div><div class="dt">3 days ago · 11 nodes</div></div>
+      </div>
+      <div class="libcard newcard"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px;margin-right:6px"><path d="M12 5v14M5 12h14"/></svg> New composition</div>
+    </div>
+    <div class="mfoot"><span>Saved in this browser · Share a link to export · migrated Variants appear as single-node items</span><span>5 saved</span></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

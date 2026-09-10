@@ -463,7 +463,7 @@ export const SCENES: Scene[] = [
 
 /** Materialises a scene into a live composition. */
 export function buildScene(scene: Scene): Composition {
-  const blocks = scene.blocks.flatMap((spec) => {
+  const root = scene.blocks.flatMap((spec) => {
     const manifest = getManifest(spec.component)
     if (!manifest) {
       console.warn(
@@ -477,7 +477,7 @@ export function buildScene(scene: Scene): Composition {
   return {
     name: scene.name,
     page: { ...DEFAULT_PAGE, ...scene.page },
-    blocks,
+    root,
   }
 }
 

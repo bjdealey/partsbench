@@ -2,6 +2,7 @@ import type { Composition } from './composition'
 import {
   COLUMNS,
   cellWidth,
+  componentNodes,
   effectivePage,
   effectiveRowSpan,
   effectiveSpan,
@@ -149,7 +150,7 @@ export function blockEffects(
 function usedComponents(composition: Composition): string[] {
   const names: string[] = []
 
-  for (const block of composition.blocks) {
+  for (const block of componentNodes(composition.root)) {
     const manifest = getManifest(block.component)
     if (!manifest) continue
     for (const name of componentNames(manifest)) {
@@ -224,7 +225,7 @@ export function generatePage(
   const handlers: string[] = []
   const cells: string[] = []
 
-  for (const block of composition.blocks) {
+  for (const block of componentNodes(composition.root)) {
     const manifest = getManifest(block.component)
     if (!manifest) continue
 

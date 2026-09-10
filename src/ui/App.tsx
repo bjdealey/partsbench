@@ -10,6 +10,7 @@ import type { Composition, PageSettings } from '../lib/composition'
 import {
   addBlock,
   createBlock,
+  findComponentNode,
   pruneBlocks,
   updateBlock,
   DEVICES,
@@ -394,7 +395,7 @@ export default function App() {
   /* ---------------- editing ---------------- */
 
   const selectedBlock = useMemo(
-    () => composition.blocks.find((block) => block.id === selectedBlockId) ?? null,
+    () => (selectedBlockId ? findComponentNode(composition.root, selectedBlockId) : null),
     [composition, selectedBlockId],
   )
   const selectedBlockManifest = selectedBlock

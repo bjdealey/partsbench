@@ -1,4 +1,5 @@
 import type { Composition } from '../lib/composition'
+import { componentNodes } from '../lib/composition'
 import { getManifest } from '../lib/registry'
 import styles from './BlockOutline.module.css'
 
@@ -23,22 +24,24 @@ export default function BlockOutline({
   onSelect,
   onAdd,
 }: BlockOutlineProps) {
+  // Slice B: the outline lists the page's leaves. Container hierarchy lands in Slice E.
+  const nodes = componentNodes(composition.root)
   return (
     <nav className={`${styles.outline} ${className ?? ''}`} aria-label="Blocks">
       <div className={styles.heading}>
         Blocks
-        <span className={styles.count}>{composition.blocks.length}</span>
+        <span className={styles.count}>{nodes.length}</span>
       </div>
 
       <button type="button" className={styles.add} onClick={onAdd}>
         Add block
       </button>
 
-      {composition.blocks.length === 0 ? (
+      {nodes.length === 0 ? (
         <p className={styles.empty}>Empty page — add a block to start.</p>
       ) : (
         <ul className={styles.list}>
-          {composition.blocks.map((block) => {
+          {nodes.map((block) => {
             const active = selectedId === block.id
             const known = getManifest(block.component)
             return (
