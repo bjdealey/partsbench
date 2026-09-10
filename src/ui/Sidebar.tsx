@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentManifest } from '../lib/types'
+import { COMPONENT_DND_MIME } from '../lib/composition'
 import { FALLBACK_CATEGORY, orderCategories } from '../lib/categories'
 import { Glyph, componentIconKey, categoryIconKey } from './icons'
 import styles from './Sidebar.module.css'
@@ -258,6 +259,14 @@ export default function Sidebar({
                         ref={isActive ? activeRef : undefined}
                         className={`${styles.item} ${isActive ? styles.active : ''}`}
                         aria-current={isActive ? 'true' : undefined}
+                        draggable
+                        onDragStart={(event) => {
+                          // Drag places a copy on the canvas (Slice D); the plain
+                          // click still opens the component in its focus overlay.
+                          event.dataTransfer.setData(COMPONENT_DND_MIME, manifest.name)
+                          event.dataTransfer.setData('text/plain', manifest.name)
+                          event.dataTransfer.effectAllowed = 'copy'
+                        }}
                         onClick={() => onSelect(manifest.name)}
                       >
                         <Glyph
