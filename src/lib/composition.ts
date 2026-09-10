@@ -1,4 +1,4 @@
-import type { ComponentManifest, PlaygroundValues, PropValues } from './types'
+import type { ComponentManifest, ControlValue, PlaygroundValues, PropValues } from './types'
 import { defaultValues } from './values'
 import { getManifest } from './registry'
 
@@ -49,6 +49,13 @@ export interface ComponentNode extends NodePlacement {
   /** Manifest name. A node whose component has since been removed is dropped. */
   component: string
   values: PlaygroundValues
+  /**
+   * Prop names this node has opted out of the shared theme (Slice H part 3).
+   * A detached prop keeps its own stored value instead of the theme's — the one
+   * per-node escape hatch, since an enabled token is otherwise authoritative.
+   * Absent (the common case) means nothing is detached.
+   */
+  detached?: string[]
 }
 
 /**
@@ -665,6 +672,43 @@ export function moveBlock(
   const [moved] = root.splice(from, 1)
   root.splice(to, 0, moved)
   return { ...composition, root }
+}
+
+/**
+ * Opts a prop out of the shared theme (Slice H part 3): records it as detached
+ * and pins the given value (the value it was showing under the theme), so the
+ * look is preserved and the theme no longer drives it.
+ */
+export function detachProp(
+  composition: Composition,
+  id: string,
+  name: string,
+  value: ControlValue,
+): Composition {
+  return {
+    ...composition,
+    root: updateNode(composition.root, id, (node) => {
+      if (node.kind !== 'component') return node
+      const detached = node.detached ?? []
+      return {
+        ...node,
+        detached: detached.includes(name) ? detached : [...detached, name],
+        values: { ...node.values, props: { ...node.values.props, [name]: value } },
+      }
+    }),
+  }
+}
+
+/** Re-attaches a prop to the theme; the theme drives it again (Slice H part 3). */
+export function reattachProp(composition: Composition, id: string, name: string): Composition {
+  return {
+    ...composition,
+    root: updateNode(composition.root, id, (node) => {
+      if (node.kind !== 'component' || !node.detached) return node
+      const detached = node.detached.filter((entry) => entry !== name)
+      return { ...node, detached: detached.length > 0 ? detached : undefined }
+    }),
+  }
 }
 
 export function updateBlock(

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { Control, ControlValue } from '../../lib/types'
 import Field from './Field'
 import TextInput from './TextInput'
@@ -13,6 +14,8 @@ interface ControlRendererProps {
   value: ControlValue
   /** Namespaces DOM ids so slot controls can't collide with the parent's. */
   idPrefix?: string
+  /** An optional tag beside the label — the theme chip (Slice H part 3). */
+  chip?: ReactNode
   onChange: (value: ControlValue) => void
 }
 
@@ -21,6 +24,7 @@ export default function ControlRenderer({
   control,
   value,
   idPrefix = '',
+  chip,
   onChange,
 }: ControlRendererProps) {
   // The id carries the prefix; the visible label stays the bare prop name.
@@ -30,7 +34,7 @@ export default function ControlRenderer({
   switch (control.kind) {
     case 'text':
       return (
-        <Field name={id} label={label} value={String(value)}>
+        <Field name={id} label={label} chip={chip} value={String(value)}>
           <TextInput name={id} value={String(value)} onChange={onChange} />
         </Field>
       )
@@ -41,6 +45,7 @@ export default function ControlRenderer({
         <Field
           name={id}
           label={label}
+          chip={chip}
           value={`${String(value).split('\n').length} lines`}
         >
           <TextareaInput
@@ -54,7 +59,7 @@ export default function ControlRenderer({
 
     case 'number':
       return (
-        <Field name={id} label={label} value={String(value)}>
+        <Field name={id} label={label} chip={chip} value={String(value)}>
           <NumberInput
             control={control}
             id={id}
@@ -66,14 +71,14 @@ export default function ControlRenderer({
 
     case 'boolean':
       return (
-        <Field name={id} label={label} value={String(value)}>
+        <Field name={id} label={label} chip={chip} value={String(value)}>
           <BooleanInput name={id} value={Boolean(value)} onChange={onChange} />
         </Field>
       )
 
     case 'select':
       return (
-        <Field name={id} label={label} value={String(value)}>
+        <Field name={id} label={label} chip={chip} value={String(value)}>
           <SelectInput
             name={id}
             options={control.options}
@@ -85,7 +90,7 @@ export default function ControlRenderer({
 
     case 'color':
       return (
-        <Field name={id} label={label} value={String(value)}>
+        <Field name={id} label={label} chip={chip} value={String(value)}>
           <ColorInput name={id} value={String(value)} onChange={onChange} />
         </Field>
       )
@@ -97,6 +102,7 @@ export default function ControlRenderer({
         <Field
           name={id}
           label={label}
+          chip={chip}
           value={String(value).trim() ? 'emitted' : 'omitted'}
         >
           <EventInput

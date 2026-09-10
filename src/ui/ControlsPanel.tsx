@@ -30,6 +30,14 @@ interface ControlsPanelProps {
    * where effects apply (the single-component stage), so compose omits the group.
    */
   onEffectChange?: (name: string, value: ControlValue) => void
+  /** Top-level prop names the shared theme is currently driving (Slice H part 3). */
+  themed?: ReadonlySet<string>
+  /** Top-level prop names detached from the theme. */
+  detached?: ReadonlySet<string>
+  /** Detach a themed prop (pin its current value locally). */
+  onDetach?: (name: string) => void
+  /** Reattach a detached prop so the theme drives it again. */
+  onReattach?: (name: string) => void
 }
 
 interface SectionItem {
@@ -63,7 +71,40 @@ export default function ControlsPanel({
   onReset,
   onRandomize,
   onEffectChange,
+  themed,
+  detached,
+  onDetach,
+  onReattach,
 }: ControlsPanelProps) {
+  // The theme chip for a top-level prop: "theme" when the shared theme drives it
+  // (click detaches), "custom" when it's been detached (click reattaches).
+  function themeChip(name: string): ReactNode {
+    if (themed?.has(name)) {
+      return (
+        <button
+          type="button"
+          className={styles.themeChip}
+          title="Driven by the shared theme — click to detach and set your own"
+          onClick={() => onDetach?.(name)}
+        >
+          theme
+        </button>
+      )
+    }
+    if (detached?.has(name)) {
+      return (
+        <button
+          type="button"
+          className={styles.detachedChip}
+          title="Detached from the theme — click to hand it back to the theme"
+          onClick={() => onReattach?.(name)}
+        >
+          custom
+        </button>
+      )
+    }
+    return null
+  }
   // Selecting a different component should land you at the top of its controls,
   // not wherever the previous component happened to be scrolled to.
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -121,6 +162,7 @@ export default function ControlsPanel({
         key={control.name}
         control={control}
         value={values.props[control.name] ?? control.default}
+        chip={themeChip(control.name)}
         onChange={(value) => onPropChange(control.name, value)}
       />,
       isStateToggle,

@@ -13,16 +13,19 @@ interface FieldProps {
   label?: string
   /** The current value, echoed next to the label. */
   value: string
+  /** An optional tag beside the label — the theme chip (Slice H part 3). */
+  chip?: ReactNode
   children: ReactNode
 }
 
-export default function Field({ name, label, value, children }: FieldProps) {
+export default function Field({ name, label, value, chip, children }: FieldProps) {
   return (
     <div className={styles.field}>
       <div className={styles.header}>
         <label className={styles.name} htmlFor={controlId(name)}>
           {label ?? name}
         </label>
+        {chip}
         <code className={styles.value} title={value}>
           {value}
         </code>
