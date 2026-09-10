@@ -425,6 +425,76 @@ export function moveNodeToIndex(composition: Composition, id: string, index: num
   return { ...composition, root }
 }
 
+/* ------------------------------------------------------------------ *
+ * Containers (Slice E). Create by grouping a node, populate by dropping
+ * into it, tune its stack, and ungroup to dissolve it back to its children.
+ * ------------------------------------------------------------------ */
+
+/** The stack-layout props a container exposes for editing. */
+export type ContainerLayout = Pick<ContainerNode, 'direction' | 'gap' | 'align' | 'padding'>
+
+/** Wraps a node in a new column container, in place. Returns the container's id. */
+export function groupInContainer(
+  composition: Composition,
+  id: string,
+): { composition: Composition; id: string } | null {
+  const node = findNode(composition.root, id)
+  if (!node) return null
+  const container = createContainer([node], node.span)
+  return {
+    composition: { ...composition, root: updateNode(composition.root, id, () => container) },
+    id: container.id,
+  }
+}
+
+/** Appends a node to a container's children (Slice E drop-into). */
+export function addNodeToContainer(
+  composition: Composition,
+  containerId: string,
+  node: Node,
+): Composition {
+  return {
+    ...composition,
+    root: updateNode(composition.root, containerId, (target) =>
+      target.kind === 'container'
+        ? { ...target, children: [...target.children, node] }
+        : target,
+    ),
+  }
+}
+
+/** Patches a container's stack-layout props. */
+export function setContainerLayout(
+  composition: Composition,
+  id: string,
+  patch: Partial<ContainerLayout>,
+): Composition {
+  return {
+    ...composition,
+    root: updateNode(composition.root, id, (node) =>
+      node.kind === 'container' ? { ...node, ...patch } : node,
+    ),
+  }
+}
+
+/** Replaces a container with its children, at any depth (Slice E ungroup). */
+export function ungroupContainer(composition: Composition, id: string): Composition {
+  function walk(nodes: Node[]): Node[] {
+    const out: Node[] = []
+    for (const node of nodes) {
+      if (node.id === id && node.kind === 'container') {
+        out.push(...node.children)
+      } else if (node.kind === 'container') {
+        out.push({ ...node, children: walk(node.children) })
+      } else {
+        out.push(node)
+      }
+    }
+    return out
+  }
+  return { ...composition, root: walk(composition.root) }
+}
+
 export function removeBlock(composition: Composition, id: string): Composition {
   return { ...composition, root: removeNode(composition.root, id) }
 }

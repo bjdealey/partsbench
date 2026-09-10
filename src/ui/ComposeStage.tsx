@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Composition, ComponentNode, Node } from '../lib/composition'
+import type { Composition, ComponentNode, ContainerNode, Node } from '../lib/composition'
 import {
   COLUMNS,
   COMPONENT_DND_MIME,
@@ -13,12 +13,14 @@ import {
   duplicateBlock,
   effectiveRowSpan,
   effectiveSpan,
+  groupInContainer,
   moveBlock,
   moveNodeToIndex,
   removeBlock,
   setFit,
   setRowSpan,
   setSpan,
+  ungroupContainer,
 } from '../lib/composition'
 import { blockEffects, resolvedValues } from '../lib/compositionCodegen'
 import type { Theme } from '../lib/theme'
@@ -79,6 +81,20 @@ const RemoveIcon = () => (
     <path d="M4 4l6 6M10 4l-6 6" />
   </svg>
 )
+const GroupIcon = () => (
+  <svg {...ICON}>
+    <path d="M3 5V3.5A0.5 0.5 0 0 1 3.5 3H5" />
+    <path d="M9 3h1.5a0.5 0.5 0 0 1 0.5 0.5V5" />
+    <path d="M11 9v1.5a0.5 0.5 0 0 1-0.5 0.5H9" />
+    <path d="M5 11H3.5a0.5 0.5 0 0 1-0.5-0.5V9" />
+  </svg>
+)
+const UngroupIcon = () => (
+  <svg {...ICON}>
+    <rect x="2" y="2" width="6" height="6" rx="1" />
+    <rect x="8.5" y="8.5" width="3.5" height="3.5" rx="1" />
+  </svg>
+)
 
 /** A container's cross-axis alignment, mapped to the flexbox keyword. */
 const ALIGN: Record<string, string> = {
@@ -113,6 +129,8 @@ interface ComposeStageProps {
   onPageChange: (page: Composition['page']) => void
   /** Drop a library component onto the canvas at a top-level index (Slice D). */
   onDropComponent: (name: string, index: number) => void
+  /** Drop a library component into a container (Slice E nesting). */
+  onDropComponentInto: (containerId: string, name: string) => void
 }
 
 export default function ComposeStage({
@@ -130,6 +148,7 @@ export default function ComposeStage({
   onSceneChange,
   onPageChange,
   onDropComponent,
+  onDropComponentInto,
 }: ComposeStageProps) {
   const { root } = composition
   // The padding and gap tokens reach the page itself, so everything that
@@ -146,6 +165,9 @@ export default function ComposeStage({
   // Slice D: where a dragged library component would land, as a top-level index —
   // null when nothing is being dragged over the canvas.
   const [dropIndex, setDropIndex] = useState<number | null>(null)
+  // Slice E: the container the drag is hovering over, so a drop nests into it
+  // instead of landing at the page level.
+  const [dropContainerId, setDropContainerId] = useState<string | null>(null)
   const undoTimer = useRef<number | null>(null)
   const undoButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -192,22 +214,20 @@ export default function ComposeStage({
   function renderNodes(nodes: Node[]): React.ReactNode {
     return nodes.map((node, index) =>
       node.kind === 'container' ? (
-        <div
+        <Container
           key={node.id}
-          data-compose-block=""
-          style={{
-            gridColumn: `span ${effectiveSpan(page, node.span)}`,
-            gridRow:
-              node.rowSpan > 1 ? `span ${effectiveRowSpan(page, node.rowSpan)}` : undefined,
-            display: 'flex',
-            flexDirection: node.direction === 'row' ? 'row' : 'column',
-            gap: node.gap,
-            alignItems: ALIGN[node.align],
-            padding: node.padding,
-          }}
+          node={node}
+          page={page}
+          interactive={interactive}
+          selected={node.id === selectedId}
+          dropTarget={dropContainerId === node.id}
+          composition={composition}
+          onSelect={onSelect}
+          onChange={onChange}
+          onRemove={handleRemove}
         >
           {renderNodes(node.children)}
-        </div>
+        </Container>
       ) : (
         <Block
           key={node.id}
@@ -245,19 +265,36 @@ export default function ComposeStage({
     return items.length
   }
 
+  // The container under the pointer, if any (Slice E). A component dropped here
+  // nests into that container rather than landing at the page level.
+  function containerAt(event: React.DragEvent): string | null {
+    const el = document.elementFromPoint(event.clientX, event.clientY)
+    return el?.closest('[data-container-id]')?.getAttribute('data-container-id') ?? null
+  }
+
   function handleDragOver(event: React.DragEvent) {
     const types = event.dataTransfer.types
     const isNode = types.includes(NODE_DND_MIME)
     if (!isNode && !types.includes(COMPONENT_DND_MIME)) return
     event.preventDefault()
     event.dataTransfer.dropEffect = isNode ? 'move' : 'copy'
-    setDropIndex(dropIndexFrom(event, event.currentTarget.querySelector('[data-compose-grid]')))
+    // Reorder (a node drag) stays top-level in this slice; only a fresh component
+    // nests into a container it is dropped onto.
+    const container = isNode ? null : containerAt(event)
+    if (container) {
+      setDropContainerId(container)
+      setDropIndex(null)
+    } else {
+      setDropContainerId(null)
+      setDropIndex(dropIndexFrom(event, event.currentTarget.querySelector('[data-compose-grid]')))
+    }
   }
 
   function handleDragLeave(event: React.DragEvent) {
     // Ignore crossings between children; only clear when the pointer truly leaves.
     if (event.currentTarget.contains(event.relatedTarget as HTMLElement | null)) return
     setDropIndex(null)
+    setDropContainerId(null)
   }
 
   function handleDrop(event: React.DragEvent) {
@@ -265,7 +302,9 @@ export default function ComposeStage({
     if (!types.includes(NODE_DND_MIME) && !types.includes(COMPONENT_DND_MIME)) return
     event.preventDefault()
     const index = dropIndex ?? root.length
+    const container = dropContainerId
     setDropIndex(null)
+    setDropContainerId(null)
     // An existing node being reordered, or a fresh component from the Library.
     const nodeId = event.dataTransfer.getData(NODE_DND_MIME)
     if (nodeId) {
@@ -274,7 +313,9 @@ export default function ComposeStage({
     }
     const name =
       event.dataTransfer.getData(COMPONENT_DND_MIME) || event.dataTransfer.getData('text/plain')
-    if (name) onDropComponent(name, index)
+    if (!name) return
+    if (container) onDropComponentInto(container, name)
+    else onDropComponent(name, index)
   }
 
   function withDropIndicator(children: React.ReactNode): React.ReactNode {
@@ -735,6 +776,18 @@ function Block({
           </button>
           <button
             type="button"
+            className={styles.iconButton}
+            title="Group in a container"
+            tabIndex={chromeTab}
+            onClick={() => {
+              const result = groupInContainer(composition, block.id)
+              if (result) onSelectAndChange(result.composition, result.id)
+            }}
+          >
+            <GroupIcon />
+          </button>
+          <button
+            type="button"
             className={`${styles.iconButton} ${styles.remove}`}
             title="Remove"
             tabIndex={chromeTab}
@@ -793,6 +846,99 @@ function Block({
           />
         </BlockSurface>
       </PreviewBoundary>
+    </div>
+  )
+}
+
+interface ContainerProps {
+  node: ContainerNode
+  page: Composition['page']
+  interactive: boolean
+  selected: boolean
+  dropTarget: boolean
+  composition: Composition
+  onSelect: (id: string | null) => void
+  onChange: (next: Composition) => void
+  onRemove: (id: string, label: string) => void
+  children: React.ReactNode
+}
+
+/**
+ * A container node (Slice E): a grid cell whose children lay out as a stack.
+ * It carries the block chrome (select · ungroup · remove) and a nesting drop
+ * zone; selecting it puts its stack controls in the right panel. Clicking a
+ * child selects the child — the child's capture-phase handler runs last.
+ */
+function Container({
+  node,
+  page,
+  interactive,
+  selected,
+  dropTarget,
+  composition,
+  onSelect,
+  onChange,
+  onRemove,
+  children,
+}: ContainerProps) {
+  const span = effectiveSpan(page, node.span)
+  const rowSpan = effectiveRowSpan(page, node.rowSpan)
+  const chromeTab = selected ? 0 : -1
+  return (
+    <div
+      className={`${styles.block} ${selected && !interactive ? styles.blockSelected : ''}`}
+      data-compose-block=""
+      data-node-id={node.id}
+      style={{
+        gridColumn: `span ${span}`,
+        gridRow: rowSpan > 1 ? `span ${rowSpan}` : undefined,
+      }}
+      role={interactive ? undefined : 'button'}
+      tabIndex={interactive ? -1 : 0}
+      aria-pressed={interactive ? undefined : selected}
+      aria-label={interactive ? undefined : 'Container'}
+      onClickCapture={interactive ? undefined : () => onSelect(node.id)}
+    >
+      {!interactive && (
+        <div className={styles.blockChrome} aria-hidden={!selected}>
+          <span className={styles.blockName}>Container</span>
+          <div className={styles.blockActions}>
+            <button
+              type="button"
+              className={styles.iconButton}
+              title="Ungroup — replace with its contents"
+              tabIndex={chromeTab}
+              onClick={() => onChange(ungroupContainer(composition, node.id))}
+            >
+              <UngroupIcon />
+            </button>
+            <button
+              type="button"
+              className={`${styles.iconButton} ${styles.remove}`}
+              title="Remove"
+              tabIndex={chromeTab}
+              onClick={() => onRemove(node.id, 'Container')}
+            >
+              <RemoveIcon />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`${styles.containerStack} ${dropTarget ? styles.containerDrop : ''}`}
+        data-container-id={node.id}
+        style={{
+          display: 'flex',
+          flexDirection: node.direction === 'row' ? 'row' : 'column',
+          gap: node.gap,
+          alignItems: ALIGN[node.align],
+          padding: node.padding,
+          minHeight: node.children.length === 0 ? 48 : undefined,
+        }}
+      >
+        {children}
+      </div>
     </div>
   )
 }
