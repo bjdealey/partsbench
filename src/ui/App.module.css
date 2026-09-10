@@ -131,6 +131,28 @@
   box-shadow: var(--shadow-seated);
 }
 
+/* Slice C: the left rail hosts both the component Library (browse) and the
+   canvas Outline as two switchable sections, so you can browse and compose
+   without leaving the surface. The reused .modes/.mode pill sits in .railTabs. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+
+.railTabs {
+  flex: 0 0 auto;
+  padding: 10px 12px 4px;
+}
+
+.railBody {
+  flex: 1;
+  min-height: 0;
+}
+
 /* The right cluster: the jump-to-a-component finder (shown only while the list
    is hidden) and the site-wide light/dark toggle. A fixed basis, like the old
    status line, so the mode switch stays centred whether or not the search shows. */
