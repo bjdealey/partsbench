@@ -15,12 +15,13 @@ import {
   effectiveSpan,
   groupInContainer,
   moveBlock,
-  moveNodeToIndex,
+  moveNode,
   removeBlock,
   setFit,
   setRowSpan,
   setSpan,
   ungroupContainer,
+  wouldCycle,
 } from '../lib/composition'
 import { blockEffects, resolvedValues } from '../lib/compositionCodegen'
 import type { Theme } from '../lib/theme'
@@ -166,8 +167,11 @@ export default function ComposeStage({
   // null when nothing is being dragged over the canvas.
   const [dropIndex, setDropIndex] = useState<number | null>(null)
   // Slice E: the container the drag is hovering over, so a drop nests into it
-  // instead of landing at the page level.
+  // instead of landing at the page level. null means the top-level grid.
   const [dropContainerId, setDropContainerId] = useState<string | null>(null)
+  // Slice E part 2: the id of the node being dragged from the canvas (a reorder
+  // or cross-level move), so hovering can refuse to nest a container into itself.
+  const [draggingId, setDraggingId] = useState<string | null>(null)
   const undoTimer = useRef<number | null>(null)
   const undoButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -211,42 +215,64 @@ export default function ComposeStage({
   // a container — none exist until Slice E gives them a create/edit UI — lays
   // its children out as a stack. `index`/`total` are per sibling list, so the
   // Move up/down chrome stays correct at every level.
-  function renderNodes(nodes: Node[]): React.ReactNode {
-    return nodes.map((node, index) =>
-      node.kind === 'container' ? (
-        <Container
-          key={node.id}
-          node={node}
-          page={page}
-          interactive={interactive}
-          selected={node.id === selectedId}
-          dropTarget={dropContainerId === node.id}
-          composition={composition}
-          onSelect={onSelect}
-          onChange={onChange}
-          onRemove={handleRemove}
-        >
-          {renderNodes(node.children)}
-        </Container>
-      ) : (
-        <Block
-          key={node.id}
-          block={node}
-          index={index}
-          total={nodes.length}
-          composition={composition}
-          theme={theme}
-          interactive={interactive}
-          selected={node.id === selectedId}
-          onSelect={onSelect}
-          onChange={onChange}
-          onSelectAndChange={onSelectAndChange}
-          onEvent={onEvent}
-          onBlockPropChange={onBlockPropChange}
-          onRemove={handleRemove}
-        />
-      ),
+  function renderNode(node: Node, index: number, total: number): React.ReactNode {
+    return node.kind === 'container' ? (
+      <Container
+        key={node.id}
+        node={node}
+        page={page}
+        interactive={interactive}
+        selected={node.id === selectedId}
+        dropTarget={dropContainerId === node.id}
+        composition={composition}
+        onSelect={onSelect}
+        onChange={onChange}
+        onRemove={handleRemove}
+        onNodeDrag={setDraggingId}
+      >
+        {renderList(node.children, node.id)}
+      </Container>
+    ) : (
+      <Block
+        key={node.id}
+        block={node}
+        index={index}
+        total={total}
+        composition={composition}
+        theme={theme}
+        interactive={interactive}
+        selected={node.id === selectedId}
+        onSelect={onSelect}
+        onChange={onChange}
+        onSelectAndChange={onSelectAndChange}
+        onEvent={onEvent}
+        onBlockPropChange={onBlockPropChange}
+        onRemove={handleRemove}
+        onNodeDrag={setDraggingId}
+      />
     )
+  }
+
+  // Renders one sibling list and, when it is the drag's drop target, splices the
+  // insertion indicator in at `dropIndex`. `parentId` is null for the top-level
+  // grid; a container passes its own id so the indicator lands inside it.
+  function renderList(nodes: Node[], parentId: string | null): React.ReactNode {
+    const rendered: React.ReactNode[] = nodes.map((node, index) =>
+      renderNode(node, index, nodes.length),
+    )
+    if (dropIndex !== null && dropContainerId === parentId) {
+      rendered.splice(
+        Math.min(dropIndex, rendered.length),
+        0,
+        <div
+          key="__drop"
+          className={parentId === null ? styles.dropIndicator : styles.dropIndicatorStack}
+          data-drop-indicator=""
+          aria-hidden="true"
+        />,
+      )
+    }
+    return rendered
   }
 
   // --- drag-to-place (Slice D) -----------------------------------------------
@@ -265,11 +291,27 @@ export default function ComposeStage({
     return items.length
   }
 
-  // The container under the pointer, if any (Slice E). A component dropped here
-  // nests into that container rather than landing at the page level.
-  function containerAt(event: React.DragEvent): string | null {
+  // The container stack under the pointer, if any (Slice E). A drop here nests
+  // into that container rather than landing at the page level. Returns the stack
+  // element so the caller can read its id and stack direction off it.
+  function containerElAt(event: React.DragEvent): HTMLElement | null {
     const el = document.elementFromPoint(event.clientX, event.clientY)
-    return el?.closest('[data-container-id]')?.getAttribute('data-container-id') ?? null
+    return (el?.closest('[data-container-id]') as HTMLElement | null) ?? null
+  }
+
+  // The child index under the pointer within a container's stack — the flex
+  // analogue of dropIndexFrom, comparing along the stack's own axis so a row and
+  // a column both find the slot the pointer is nearest.
+  function childIndexIn(stack: HTMLElement, event: React.DragEvent): number {
+    const items = Array.from(stack.children).filter((el) => el.hasAttribute('data-compose-block'))
+    const row = stack.getAttribute('data-direction') === 'row'
+    const { clientX: x, clientY: y } = event
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i].getBoundingClientRect()
+      const after = row ? x > r.left + r.width / 2 : y > r.top + r.height / 2
+      if (!after) return i
+    }
+    return items.length
   }
 
   function handleDragOver(event: React.DragEvent) {
@@ -278,12 +320,20 @@ export default function ComposeStage({
     if (!isNode && !types.includes(COMPONENT_DND_MIME)) return
     event.preventDefault()
     event.dataTransfer.dropEffect = isNode ? 'move' : 'copy'
-    // Reorder (a node drag) stays top-level in this slice; only a fresh component
-    // nests into a container it is dropped onto.
-    const container = isNode ? null : containerAt(event)
-    if (container) {
-      setDropContainerId(container)
-      setDropIndex(null)
+
+    // A container under the pointer is the drop target — unless a node drag would
+    // nest that container into itself (or its own subtree), which is refused.
+    let stack = containerElAt(event)
+    const stackId = stack?.getAttribute('data-container-id') ?? null
+    if (stack && isNode && draggingId && stackId && wouldCycle(composition, draggingId, stackId)) {
+      stack = null
+    }
+
+    if (stack) {
+      setDropContainerId(stack.getAttribute('data-container-id'))
+      // Moving an existing node picks a slot in the stack; a fresh component just
+      // nests (appended), so it highlights the container without an insertion line.
+      setDropIndex(isNode ? childIndexIn(stack, event) : null)
     } else {
       setDropContainerId(null)
       setDropIndex(dropIndexFrom(event, event.currentTarget.querySelector('[data-compose-grid]')))
@@ -301,30 +351,24 @@ export default function ComposeStage({
     const types = event.dataTransfer.types
     if (!types.includes(NODE_DND_MIME) && !types.includes(COMPONENT_DND_MIME)) return
     event.preventDefault()
-    const index = dropIndex ?? root.length
     const container = dropContainerId
+    const index = dropIndex
     setDropIndex(null)
     setDropContainerId(null)
-    // An existing node being reordered, or a fresh component from the Library.
+    setDraggingId(null)
+    // An existing node being moved (reorder or cross-level), or a fresh component.
     const nodeId = event.dataTransfer.getData(NODE_DND_MIME)
     if (nodeId) {
-      onChange(moveNodeToIndex(composition, nodeId, index))
+      // No insertion line (a fresh-component-style highlight, or an empty stack)
+      // means append; a very large index clamps to the end in moveNode.
+      onChange(moveNode(composition, nodeId, container, index ?? Number.MAX_SAFE_INTEGER))
       return
     }
     const name =
       event.dataTransfer.getData(COMPONENT_DND_MIME) || event.dataTransfer.getData('text/plain')
     if (!name) return
     if (container) onDropComponentInto(container, name)
-    else onDropComponent(name, index)
-  }
-
-  function withDropIndicator(children: React.ReactNode): React.ReactNode {
-    if (dropIndex === null) return children
-    const list = Array.isArray(children) ? [...children] : [children]
-    list.splice(Math.min(dropIndex, list.length), 0, (
-      <div key="__drop" className={styles.dropIndicator} aria-hidden="true" />
-    ))
-    return list
+    else onDropComponent(name, index ?? root.length)
   }
 
   return (
@@ -474,7 +518,7 @@ export default function ComposeStage({
               data-compose-grid=""
               style={{ gap: page.gap, gridTemplateColumns: `repeat(${COLUMNS}, 1fr)` }}
             >
-              {withDropIndicator(renderNodes(root))}
+              {renderList(root, null)}
             </div>
           )}
         </div>
@@ -561,6 +605,8 @@ interface BlockProps {
   onEvent: EventReporter
   onBlockPropChange: (id: string, name: string, value: ControlValue) => void
   onRemove: (id: string, label: string) => void
+  /** Reports the node being dragged (its id, or null on drag end) for the cycle guard. */
+  onNodeDrag: (id: string | null) => void
 }
 
 function Block({
@@ -577,6 +623,7 @@ function Block({
   onEvent,
   onBlockPropChange,
   onRemove,
+  onNodeDrag,
 }: BlockProps) {
   const blockRef = useRef<HTMLDivElement>(null)
   const manifest = getManifest(block.component)
@@ -670,8 +717,10 @@ function Block({
             onDragStart={(event) => {
               event.dataTransfer.setData(NODE_DND_MIME, block.id)
               event.dataTransfer.effectAllowed = 'move'
+              onNodeDrag(block.id)
             }}
-            title="Drag to reorder"
+            onDragEnd={() => onNodeDrag(null)}
+            title="Drag to move — reorder, or into a container"
           >
             {block.component}
           </span>
@@ -860,6 +909,7 @@ interface ContainerProps {
   onSelect: (id: string | null) => void
   onChange: (next: Composition) => void
   onRemove: (id: string, label: string) => void
+  onNodeDrag: (id: string | null) => void
   children: React.ReactNode
 }
 
@@ -879,6 +929,7 @@ function Container({
   onSelect,
   onChange,
   onRemove,
+  onNodeDrag,
   children,
 }: ContainerProps) {
   const span = effectiveSpan(page, node.span)
@@ -901,7 +952,19 @@ function Container({
     >
       {!interactive && (
         <div className={styles.blockChrome} aria-hidden={!selected}>
-          <span className={styles.blockName}>Container</span>
+          <span
+            className={styles.blockName}
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(NODE_DND_MIME, node.id)
+              event.dataTransfer.effectAllowed = 'move'
+              onNodeDrag(node.id)
+            }}
+            onDragEnd={() => onNodeDrag(null)}
+            title="Drag to move — reorder, or into another container"
+          >
+            Container
+          </span>
           <div className={styles.blockActions}>
             <button
               type="button"
@@ -928,6 +991,7 @@ function Container({
       <div
         className={`${styles.containerStack} ${dropTarget ? styles.containerDrop : ''}`}
         data-container-id={node.id}
+        data-direction={node.direction}
         style={{
           display: 'flex',
           flexDirection: node.direction === 'row' ? 'row' : 'column',

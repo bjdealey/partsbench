@@ -159,6 +159,18 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* Slice E part 2: the same insertion line, inside a container's flex stack. A
+   3px flex-basis marks the gap on the stack's main axis, and stretch fills the
+   cross axis — so it reads as a full-width bar in a column and a full-height bar
+   in a row without the indicator needing to know which. */
+.dropIndicatorStack {
+  flex: 0 0 3px;
+  align-self: stretch;
+  border-radius: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
 /* Slice E: a container's stack area — a subtle dashed frame so its bounds read
    on the canvas, highlighted while a component is dragged onto it. */
 .containerStack {

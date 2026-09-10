@@ -411,18 +411,89 @@ export function addNodeAt(composition: Composition, node: Node, index: number): 
 export const NODE_DND_MIME = 'application/x-partsbench-node'
 
 /**
- * Moves a top-level node to a new top-level index (Slice D reorder). The index
- * is one into the array as it stands *with* the moved node still present — the
- * removal shift is corrected here so the drop lands where the indicator showed.
+ * Where a node currently sits: the id of its parent container (null at the top
+ * level) and its index among that parent's children. The one lookup that both
+ * the cycle guard and the shift correction in {@link moveNode} need.
+ */
+function locate(
+  nodes: Node[],
+  id: string,
+  parentId: string | null = null,
+): { parentId: string | null; index: number } | null {
+  const index = nodes.findIndex((node) => node.id === id)
+  if (index !== -1) return { parentId, index }
+  for (const node of nodes) {
+    if (node.kind === 'container') {
+      const found = locate(node.children, id, node.id)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+/** True when `id` is somewhere inside `node`'s subtree (a container's descendant). */
+function containsNode(node: Node, id: string): boolean {
+  return node.kind === 'container' && node.children.some((child) => child.id === id || containsNode(child, id))
+}
+
+/**
+ * Would moving `id` into `containerId` swallow the node into itself? True when
+ * they are the same node, or when `containerId` lives inside `id`'s own subtree —
+ * the two cases a cross-level drag must refuse so a container can't contain itself.
+ */
+export function wouldCycle(composition: Composition, id: string, containerId: string): boolean {
+  if (id === containerId) return true
+  const node = findNode(composition.root, id)
+  return node ? containsNode(node, containerId) : false
+}
+
+/**
+ * Moves a node to a new position anywhere in the tree (Slice E part 2): into a
+ * container (`parentId` set), out to the top level (`parentId` null), or to a
+ * new slot among its current siblings. `index` counts into the destination as it
+ * stands *with* the moved node still present, so when the parent is unchanged the
+ * removal shift is corrected here and the drop lands where the indicator showed.
+ * A move that would nest a node inside itself is refused.
+ */
+export function moveNode(
+  composition: Composition,
+  id: string,
+  parentId: string | null,
+  index: number,
+): Composition {
+  const moving = findNode(composition.root, id)
+  if (!moving) return composition
+  if (parentId !== null && wouldCycle(composition, id, parentId)) return composition
+
+  const from = locate(composition.root, id)
+  if (!from) return composition
+  // Only a move within one parent shifts the destination indices as the node
+  // leaves; a cross-parent move lands at the raw index.
+  const to = from.parentId === parentId && from.index < index ? index - 1 : index
+
+  const detached = removeNode(composition.root, id)
+  if (parentId === null) {
+    const root = [...detached]
+    root.splice(Math.max(0, Math.min(root.length, to)), 0, moving)
+    return { ...composition, root }
+  }
+  return {
+    ...composition,
+    root: updateNode(detached, parentId, (target) => {
+      if (target.kind !== 'container') return target
+      const children = [...target.children]
+      children.splice(Math.max(0, Math.min(children.length, to)), 0, moving)
+      return { ...target, children }
+    }),
+  }
+}
+
+/**
+ * Moves a top-level node to a new top-level index (Slice D reorder) — the
+ * flat-list case of {@link moveNode}, kept for its existing callers.
  */
 export function moveNodeToIndex(composition: Composition, id: string, index: number): Composition {
-  const root = [...composition.root]
-  const from = root.findIndex((node) => node.id === id)
-  if (from === -1) return composition
-  const [moved] = root.splice(from, 1)
-  const to = from < index ? index - 1 : index
-  root.splice(Math.max(0, Math.min(root.length, to)), 0, moved)
-  return { ...composition, root }
+  return moveNode(composition, id, null, index)
 }
 
 /* ------------------------------------------------------------------ *
