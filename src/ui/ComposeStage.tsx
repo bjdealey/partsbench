@@ -3,6 +3,7 @@ import type { Composition, ComponentNode, Node } from '../lib/composition'
 import {
   COLUMNS,
   COMPONENT_DND_MIME,
+  NODE_DND_MIME,
   DEVICES,
   SPAN_PRESETS,
   activeDevice,
@@ -13,6 +14,7 @@ import {
   effectiveRowSpan,
   effectiveSpan,
   moveBlock,
+  moveNodeToIndex,
   removeBlock,
   setFit,
   setRowSpan,
@@ -244,9 +246,11 @@ export default function ComposeStage({
   }
 
   function handleDragOver(event: React.DragEvent) {
-    if (!event.dataTransfer.types.includes(COMPONENT_DND_MIME)) return
+    const types = event.dataTransfer.types
+    const isNode = types.includes(NODE_DND_MIME)
+    if (!isNode && !types.includes(COMPONENT_DND_MIME)) return
     event.preventDefault()
-    event.dataTransfer.dropEffect = 'copy'
+    event.dataTransfer.dropEffect = isNode ? 'move' : 'copy'
     setDropIndex(dropIndexFrom(event, event.currentTarget.querySelector('[data-compose-grid]')))
   }
 
@@ -257,12 +261,19 @@ export default function ComposeStage({
   }
 
   function handleDrop(event: React.DragEvent) {
-    if (!event.dataTransfer.types.includes(COMPONENT_DND_MIME)) return
+    const types = event.dataTransfer.types
+    if (!types.includes(NODE_DND_MIME) && !types.includes(COMPONENT_DND_MIME)) return
     event.preventDefault()
-    const name =
-      event.dataTransfer.getData(COMPONENT_DND_MIME) || event.dataTransfer.getData('text/plain')
     const index = dropIndex ?? root.length
     setDropIndex(null)
+    // An existing node being reordered, or a fresh component from the Library.
+    const nodeId = event.dataTransfer.getData(NODE_DND_MIME)
+    if (nodeId) {
+      onChange(moveNodeToIndex(composition, nodeId, index))
+      return
+    }
+    const name =
+      event.dataTransfer.getData(COMPONENT_DND_MIME) || event.dataTransfer.getData('text/plain')
     if (name) onDropComponent(name, index)
   }
 
@@ -526,6 +537,7 @@ function Block({
   onBlockPropChange,
   onRemove,
 }: BlockProps) {
+  const blockRef = useRef<HTMLDivElement>(null)
   const manifest = getManifest(block.component)
   if (!manifest) return null
 
@@ -569,6 +581,7 @@ function Block({
 
   return (
     <div
+      ref={blockRef}
       className={`${styles.block} ${selected && !interactive ? styles.blockSelected : ''} ${
         interactive ? styles.blockPlain : ''
       }`}
@@ -580,6 +593,7 @@ function Block({
       // block click from a background click without the capture handler having to
       // stop propagation.
       data-compose-block=""
+      data-node-id={block.id}
       // A real selection control for the keyboard, mirroring the click below.
       // Off in interact mode, where there is nothing to select.
       role={interactive ? undefined : 'button'}
@@ -609,7 +623,17 @@ function Block({
     >
       {!interactive && (
         <div className={styles.blockChrome} aria-hidden={!selected}>
-          <span className={styles.blockName}>{block.component}</span>
+          <span
+            className={styles.blockName}
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(NODE_DND_MIME, block.id)
+              event.dataTransfer.effectAllowed = 'move'
+            }}
+            title="Drag to reorder"
+          >
+            {block.component}
+          </span>
 
           <div className={styles.blockActions}>
             <div className={styles.spans} role="group" aria-label="Width">
@@ -720,6 +744,40 @@ function Block({
           </button>
         </div>
       </div>
+      )}
+
+      {!interactive && (
+        <div
+          className={styles.resizeHandle}
+          aria-hidden="true"
+          title="Drag to resize width"
+          onPointerDown={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            try {
+              event.currentTarget.setPointerCapture(event.pointerId)
+            } catch {
+              // Capture can fail (no active pointer); the move handler still resizes.
+            }
+          }}
+          onPointerMove={(event) => {
+            if (event.buttons === 0) return
+            const el = blockRef.current
+            const grid = el?.closest('[data-compose-grid]')
+            if (!el || !grid) return
+            const gridRect = grid.getBoundingClientRect()
+            const blockRect = el.getBoundingClientRect()
+            const columnWidth = (gridRect.width - scaled.gap * (COLUMNS - 1)) / COLUMNS
+            const next = Math.max(
+              1,
+              Math.min(
+                COLUMNS,
+                Math.round((event.clientX - blockRect.left + scaled.gap) / (columnWidth + scaled.gap)),
+              ),
+            )
+            if (next !== block.span) onChange(setSpan(composition, block.id, next))
+          }}
+        />
       )}
 
       {/* Per block, so one component throwing leaves the rest of the page up —

@@ -407,6 +407,24 @@ export function addNodeAt(composition: Composition, node: Node, index: number): 
   return { ...composition, root }
 }
 
+/** Drag payload type for reordering an existing canvas node (Slice D). */
+export const NODE_DND_MIME = 'application/x-partsbench-node'
+
+/**
+ * Moves a top-level node to a new top-level index (Slice D reorder). The index
+ * is one into the array as it stands *with* the moved node still present — the
+ * removal shift is corrected here so the drop lands where the indicator showed.
+ */
+export function moveNodeToIndex(composition: Composition, id: string, index: number): Composition {
+  const root = [...composition.root]
+  const from = root.findIndex((node) => node.id === id)
+  if (from === -1) return composition
+  const [moved] = root.splice(from, 1)
+  const to = from < index ? index - 1 : index
+  root.splice(Math.max(0, Math.min(root.length, to)), 0, moved)
+  return { ...composition, root }
+}
+
 export function removeBlock(composition: Composition, id: string): Composition {
   return { ...composition, root: removeNode(composition.root, id) }
 }
