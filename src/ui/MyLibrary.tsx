@@ -11,6 +11,8 @@ interface MyLibraryProps {
   onOpen: (entry: LibraryEntry) => void
   onRename: (id: string, name: string) => void
   onDelete: (entry: LibraryEntry) => void
+  /** Copies the current page's share link to the clipboard. */
+  onShare: () => void
 }
 
 type Naming = { kind: 'save' } | { kind: 'rename'; id: string } | null
@@ -30,14 +32,23 @@ export default function MyLibrary({
   onOpen,
   onRename,
   onDelete,
+  onShare,
 }: MyLibraryProps) {
   const [naming, setNaming] = useState<Naming>(null)
   const [draft, setDraft] = useState('')
+  const [copied, setCopied] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (naming) inputRef.current?.select()
   }, [naming])
+
+  // "Copied ✓" is a transient confirmation — the link is now on the clipboard.
+  useEffect(() => {
+    if (!copied) return
+    const timer = window.setTimeout(() => setCopied(false), 1500)
+    return () => window.clearTimeout(timer)
+  }, [copied])
 
   function startSave() {
     setDraft(suggestedName)
@@ -99,9 +110,22 @@ export default function MyLibrary({
       {naming?.kind === 'save' ? (
         namer('Name this page')
       ) : (
-        <button type="button" className={styles.save} onClick={startSave}>
-          Save current page
-        </button>
+        <div className={styles.actions}>
+          <button type="button" className={styles.save} onClick={startSave}>
+            Save current page
+          </button>
+          <button
+            type="button"
+            className={styles.share}
+            onClick={() => {
+              onShare()
+              setCopied(true)
+            }}
+            title="Copy a shareable link to the current page"
+          >
+            {copied ? 'Copied ✓' : 'Copy link'}
+          </button>
+        </div>
       )}
 
       {entries.length === 0 ? (

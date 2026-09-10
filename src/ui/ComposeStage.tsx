@@ -4,6 +4,7 @@ import {
   COLUMNS,
   COMPONENT_DND_MIME,
   NODE_DND_MIME,
+  PUBLISHED_DND_MIME,
   DEVICES,
   SPAN_PRESETS,
   activeDevice,
@@ -132,6 +133,8 @@ interface ComposeStageProps {
   onDropComponent: (name: string, index: number) => void
   /** Drop a library component into a container (Slice E nesting). */
   onDropComponentInto: (containerId: string, name: string) => void
+  /** Drop a Published Component onto the canvas — inserts a copy (Slice F part 2). */
+  onDropPublished: (id: string, index: number) => void
 }
 
 export default function ComposeStage({
@@ -150,6 +153,7 @@ export default function ComposeStage({
   onPageChange,
   onDropComponent,
   onDropComponentInto,
+  onDropPublished,
 }: ComposeStageProps) {
   const { root } = composition
   // The padding and gap tokens reach the page itself, so everything that
@@ -317,13 +321,15 @@ export default function ComposeStage({
   function handleDragOver(event: React.DragEvent) {
     const types = event.dataTransfer.types
     const isNode = types.includes(NODE_DND_MIME)
-    if (!isNode && !types.includes(COMPONENT_DND_MIME)) return
+    const isPublished = types.includes(PUBLISHED_DND_MIME)
+    if (!isNode && !isPublished && !types.includes(COMPONENT_DND_MIME)) return
     event.preventDefault()
     event.dataTransfer.dropEffect = isNode ? 'move' : 'copy'
 
     // A container under the pointer is the drop target — unless a node drag would
-    // nest that container into itself (or its own subtree), which is refused.
-    let stack = containerElAt(event)
+    // nest that container into itself (or its own subtree), which is refused. A
+    // Published Component always lands at the page level in this slice.
+    let stack = isPublished ? null : containerElAt(event)
     const stackId = stack?.getAttribute('data-container-id') ?? null
     if (stack && isNode && draggingId && stackId && wouldCycle(composition, draggingId, stackId)) {
       stack = null
@@ -349,14 +355,20 @@ export default function ComposeStage({
 
   function handleDrop(event: React.DragEvent) {
     const types = event.dataTransfer.types
-    if (!types.includes(NODE_DND_MIME) && !types.includes(COMPONENT_DND_MIME)) return
+    if (
+      !types.includes(NODE_DND_MIME) &&
+      !types.includes(PUBLISHED_DND_MIME) &&
+      !types.includes(COMPONENT_DND_MIME)
+    ) {
+      return
+    }
     event.preventDefault()
     const container = dropContainerId
     const index = dropIndex
     setDropIndex(null)
     setDropContainerId(null)
     setDraggingId(null)
-    // An existing node being moved (reorder or cross-level), or a fresh component.
+    // An existing node being moved (reorder or cross-level)…
     const nodeId = event.dataTransfer.getData(NODE_DND_MIME)
     if (nodeId) {
       // No insertion line (a fresh-component-style highlight, or an empty stack)
@@ -364,6 +376,13 @@ export default function ComposeStage({
       onChange(moveNode(composition, nodeId, container, index ?? Number.MAX_SAFE_INTEGER))
       return
     }
+    // …a copy of a Published Component, dropped at the page level…
+    const publishedId = event.dataTransfer.getData(PUBLISHED_DND_MIME)
+    if (publishedId) {
+      onDropPublished(publishedId, index ?? root.length)
+      return
+    }
+    // …or a fresh component from the Library.
     const name =
       event.dataTransfer.getData(COMPONENT_DND_MIME) || event.dataTransfer.getData('text/plain')
     if (!name) return

@@ -411,6 +411,14 @@ export function addNodeAt(composition: Composition, node: Node, index: number): 
 export const NODE_DND_MIME = 'application/x-partsbench-node'
 
 /**
+ * Drag payload type for a Published Component dragged from the Library palette
+ * (Slice F part 2). Carries the published entry's id — the subtree it stands for
+ * is decoded to a fresh copy on drop, so a Published Component is a copy source,
+ * never a live instance.
+ */
+export const PUBLISHED_DND_MIME = 'application/x-partsbench-published'
+
+/**
  * Where a node currently sits: the id of its parent container (null at the top
  * level) and its index among that parent's children. The one lookup that both
  * the cycle guard and the shift correction in {@link moveNode} need.

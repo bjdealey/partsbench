@@ -31,10 +31,15 @@
   letter-spacing: 0;
 }
 
+.actions {
+  display: flex;
+  gap: 6px;
+  margin: 0 8px 8px;
+}
+
 /* Primary action — accent, since saving is the point of this rail. */
 .save {
-  width: calc(100% - 16px);
-  margin: 0 8px 8px;
+  flex: 1;
   height: 30px;
   border: 1px solid var(--accent);
   border-radius: 6px;
@@ -52,6 +57,31 @@
 
 .save:focus-visible {
   outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Secondary — sharing is the durable, portable companion to the local save. */
+.share {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+
+.share:hover {
+  background: var(--panel-alt);
+  color: var(--text);
+}
+
+.share:focus-visible {
+  outline: none;
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 

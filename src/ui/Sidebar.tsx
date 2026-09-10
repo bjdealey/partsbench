@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentManifest } from '../lib/types'
-import { COMPONENT_DND_MIME } from '../lib/composition'
+import { COMPONENT_DND_MIME, PUBLISHED_DND_MIME } from '../lib/composition'
+import type { PublishedComponent } from '../lib/library'
 import { FALLBACK_CATEGORY, orderCategories } from '../lib/categories'
 import { Glyph, componentIconKey, categoryIconKey } from './icons'
 import styles from './Sidebar.module.css'
@@ -17,6 +18,11 @@ interface SidebarProps {
    * two keypresses in one tick would otherwise both act on a stale selection.
    */
   onStep: (delta: number, pool: string[]) => void
+  /** Published Components — user-authored copy sources shown atop the palette (Slice F). */
+  published: PublishedComponent[]
+  /** Insert a copy of a Published Component onto the canvas (pick, not drag). */
+  onInsertPublished: (entry: PublishedComponent) => void
+  onDeletePublished: (entry: PublishedComponent) => void
 }
 
 function controlCount(manifest: ComponentManifest): number {
@@ -42,6 +48,9 @@ export default function Sidebar({
   selected,
   onSelect,
   onStep,
+  published,
+  onInsertPublished,
+  onDeletePublished,
 }: SidebarProps) {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
@@ -87,6 +96,14 @@ export default function Sidebar({
   )
 
   const needle = query.trim().toLowerCase()
+
+  const visiblePublished = useMemo(
+    () =>
+      needle
+        ? published.filter((entry) => entry.name.toLowerCase().includes(needle))
+        : published,
+    [published, needle],
+  )
 
   const visible = useMemo(
     () => (needle ? manifests.filter((entry) => matches(entry, needle)) : manifests),
@@ -218,6 +235,45 @@ export default function Sidebar({
         >
           {allCollapsed ? 'Expand all' : 'Collapse all'}
         </button>
+      )}
+
+      {visiblePublished.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.publishedHeader}>
+            <Glyph name="grid4" className={styles.sectionIcon} />
+            <span className={styles.sectionName}>My Components</span>
+            <span className={styles.sectionCount}>{visiblePublished.length}</span>
+          </div>
+          <ul className={styles.list}>
+            {visiblePublished.map((entry) => (
+              <li key={entry.id} className={styles.publishedItem}>
+                <button
+                  type="button"
+                  className={styles.item}
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData(PUBLISHED_DND_MIME, entry.id)
+                    event.dataTransfer.effectAllowed = 'copy'
+                  }}
+                  onClick={() => onInsertPublished(entry)}
+                  title={`Insert a copy of ${entry.name}`}
+                >
+                  <Glyph name="grid4" className={styles.itemIcon} />
+                  <span className={styles.itemName}>{entry.name}</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.publishedDelete}
+                  aria-label={`Delete ${entry.name}`}
+                  title={`Delete ${entry.name}`}
+                  onClick={() => onDeletePublished(entry)}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {visible.length === 0 && (
