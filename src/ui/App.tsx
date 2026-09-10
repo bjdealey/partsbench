@@ -57,7 +57,13 @@ import {
   openLibraryEntry,
   migrateVariantsToLibrary,
   nextLibraryName,
+  loadPublished,
+  publishComponent,
+  deletePublished,
+  openPublished,
+  nextPublishedName,
   type LibraryEntry,
+  type PublishedComponent,
 } from '../lib/library'
 import Splitter from './Splitter'
 import Sidebar from './Sidebar'
@@ -220,6 +226,15 @@ export default function App() {
     migrateVariantsToLibrary()
     setLibrary(loadLibrary())
   }, [])
+
+  // Published Components (Slice F part 2): user-authored copy sources shown in
+  // the Library palette. `publishing` names the selected node before it lands.
+  const [published, setPublished] = useState<PublishedComponent[]>(() => loadPublished())
+  const [publishing, setPublishing] = useState(false)
+  const [publishDraft, setPublishDraft] = useState('')
+  // A half-typed publish name belongs to the node it was opened for; drop it when
+  // the selection moves on.
+  useEffect(() => setPublishing(false), [selectedBlockId])
 
   const [events, setEvents] = useState<LoggedEvent[]>([])
   const nextEventId = useRef(0)
@@ -642,6 +657,74 @@ export default function App() {
     setLibrary(deleteLibraryEntry(entry.id))
   }
 
+  // Share: the current page already lives in the URL hash (written by the effect
+  // above), so sharing is copying that link. Import is the mirror — opening a
+  // shared link lands it on the canvas, and Save current page keeps it.
+  function handleShare() {
+    try {
+      // `.catch` (not just try/catch) so a rejected write — clipboard blocked by
+      // permissions or an insecure context — doesn't surface as an unhandled
+      // rejection; the URL bar still holds the link either way.
+      navigator.clipboard?.writeText(window.location.href)?.catch(() => {})
+    } catch {
+      // Some environments throw synchronously on access rather than rejecting.
+    }
+  }
+
+  /* ---------------- Published Components (Slice F part 2) ---------------- */
+
+  // Naming a publish is inline in the right panel; it opens with the node's own
+  // name (a component) or "Group" (a container) as the suggested label.
+  function startPublish() {
+    const node = selectedBlockId ? findNode(composition.root, selectedBlockId) : null
+    if (!node) return
+    const base = node.kind === 'component' ? node.component : 'Group'
+    setPublishDraft(nextPublishedName(published, base))
+    setPublishing(true)
+  }
+
+  function commitPublish() {
+    const name = publishDraft.trim()
+    const node = selectedBlockId ? findNode(composition.root, selectedBlockId) : null
+    if (name && node) {
+      setPublished(publishComponent(name, node, composition.page, theme))
+      // Reveal the palette so the new entry is where the eye goes next.
+      setRailTab('library')
+    }
+    setPublishing(false)
+  }
+
+  // Insert a copy of a Published Component. Decoding mints fresh ids, so the copy
+  // is independent of the source and of any other copy already on the page.
+  function insertPublishedNodes(nodes: ReturnType<typeof openPublished>, index: number) {
+    if (!nodes || nodes.length === 0) return
+    setComposition((prev) => {
+      let next = prev
+      let at = index
+      for (const node of nodes) {
+        next = addNodeAt(next, node, at)
+        at += 1
+      }
+      return { ...next, name: sceneByName(prev.name) ? `${prev.name} (edited)` : prev.name }
+    })
+    setSelectedBlockId(nodes[0].id)
+    setFocusOpen(false)
+    if (isMobile) setMobileTab('center')
+  }
+
+  function handleInsertPublished(entry: PublishedComponent) {
+    insertPublishedNodes(openPublished(entry), composition.root.length)
+  }
+
+  function handleDropPublished(id: string, index: number) {
+    const entry = published.find((candidate) => candidate.id === id)
+    if (entry) insertPublishedNodes(openPublished(entry), index)
+  }
+
+  function handleDeletePublished(entry: PublishedComponent) {
+    setPublished(deletePublished(entry.id))
+  }
+
   /**
    * Randomise. In compose it restyles the selected block under the page theme;
    * everywhere else it generates the global design system above.
@@ -1040,6 +1123,9 @@ export default function App() {
                   selected={focusOpen ? activeName : ''}
                   onSelect={openComponent}
                   onStep={handleStep}
+                  published={published}
+                  onInsertPublished={handleInsertPublished}
+                  onDeletePublished={handleDeletePublished}
                 />
               ) : railTab === 'saved' ? (
                 <MyLibrary
@@ -1050,6 +1136,7 @@ export default function App() {
                   onOpen={handleOpenLibrary}
                   onRename={handleRenameLibrary}
                   onDelete={handleDeleteLibrary}
+                  onShare={handleShare}
                 />
               ) : (
                 <BlockOutline
@@ -1094,6 +1181,7 @@ export default function App() {
                 onPageChange={handlePageChange}
                 onDropComponent={handleDropComponent}
                 onDropComponentInto={handleDropComponentInto}
+                onDropPublished={handleDropPublished}
               />
             ) : contact && manifest && values ? (
               <ContactSheet
@@ -1231,6 +1319,46 @@ export default function App() {
                 </div>
                 <Splitter pane={themePane} label="Theme panel height" />
               </>
+            )}
+
+            {composing && selectedBlockId && (selectedBlock || selectedContainer) && (
+              <div className={styles.publishRow} data-publish-row="">
+                {publishing ? (
+                  <div className={styles.publishNamer}>
+                    <input
+                      className={styles.ccInput}
+                      autoFocus
+                      value={publishDraft}
+                      aria-label="Component name"
+                      placeholder="Component name"
+                      onChange={(event) => setPublishDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          commitPublish()
+                        } else if (event.key === 'Escape') {
+                          event.preventDefault()
+                          setPublishing(false)
+                        }
+                      }}
+                    />
+                    <button type="button" className={styles.publishSave} onClick={commitPublish}>
+                      Publish
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.publishCancel}
+                      onClick={() => setPublishing(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" className={styles.publishButton} onClick={startPublish}>
+                    Publish as component
+                  </button>
+                )}
+              </div>
             )}
 
             {selectedContainer ? (

@@ -1,4 +1,4 @@
-import type { Composition, ComponentNode } from './composition'
+import type { Composition, ComponentNode, Node, PageSettings } from './composition'
 import { DEFAULT_PAGE } from './composition'
 import type { Theme } from './theme'
 import { defaultTheme } from './theme'
@@ -172,4 +172,84 @@ export function migrateVariantsToLibrary(): void {
     // If the flag can't be written the worst case is a re-scan next load, which
     // is idempotent enough — the same variants would import once more at most.
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Published Components (Slice F part 2). A node or subtree the owner has
+ * promoted into the Library palette as a reusable *copy source* — a
+ * user-authored building block sitting alongside the code components.
+ * Stored like My Library entries (the shareable encoding), so inserting one
+ * decodes to fresh ids and a Published Component is never a live instance.
+ * ------------------------------------------------------------------ */
+
+const PUBLISHED_KEY = 'partsbench:published'
+
+export interface PublishedComponent {
+  id: string
+  name: string
+  savedAt: number
+  /** The subtree in its shareable encoding — decode to insert a copy. */
+  payload: EncodedComposition
+}
+
+export function loadPublished(): PublishedComponent[] {
+  try {
+    const raw = localStorage.getItem(PUBLISHED_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as PublishedComponent[]) : []
+  } catch {
+    return []
+  }
+}
+
+function writePublished(entries: PublishedComponent[]): void {
+  try {
+    localStorage.setItem(PUBLISHED_KEY, JSON.stringify(entries))
+  } catch {
+    // Convenience store — same bargain as the rest of this module.
+  }
+}
+
+/** A name one past any existing "<base>" / "<base> N", so the palette stays legible. */
+export function nextPublishedName(entries: PublishedComponent[], base: string): string {
+  const taken = new Set(entries.map((entry) => entry.name))
+  if (!taken.has(base)) return base
+  let n = 2
+  while (taken.has(`${base} ${n}`)) n += 1
+  return `${base} ${n}`
+}
+
+/**
+ * Promotes a node (a configured component, or a container and everything in it)
+ * into the palette under a name. The subtree is snapshotted as a one-node
+ * composition in the shareable encoding; returns the new full list (newest first).
+ */
+export function publishComponent(
+  name: string,
+  node: Node,
+  page: PageSettings,
+  theme: Theme,
+): PublishedComponent[] {
+  const composition: Composition = { name, page, root: [node] }
+  const entry: PublishedComponent = {
+    id: newId(),
+    name,
+    savedAt: Date.now(),
+    payload: encodeComposition(composition, theme),
+  }
+  const next = [entry, ...loadPublished()]
+  writePublished(next)
+  return next
+}
+
+export function deletePublished(id: string): PublishedComponent[] {
+  const next = loadPublished().filter((entry) => entry.id !== id)
+  writePublished(next)
+  return next
+}
+
+/** Decodes a Published Component to fresh copy nodes, or null if it can't. */
+export function openPublished(entry: PublishedComponent): Node[] | null {
+  return decodeComposition(entry.payload)?.composition.root ?? null
 }
