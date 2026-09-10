@@ -446,8 +446,16 @@ export default function App() {
    */
   function editActive(update: (prev: PlaygroundValues) => PlaygroundValues) {
     if (!focusOpen) {
-      if (!selectedBlock) return
-      setComposition((prev) => updateBlock(prev, selectedBlock.id, update))
+      // Slice H: the edit applies to every selected node. For a single selection
+      // that is the one block; for a homogeneous multi-selection (the only case
+      // the shared panel renders for), it edits them all at once. updateBlock
+      // touches only component nodes, so a container in the set is a no-op.
+      if (selectedIds.length === 0) return
+      setComposition((prev) => {
+        let next = prev
+        for (const id of selectedIds) next = updateBlock(next, id, update)
+        return next
+      })
       return
     }
 
@@ -505,12 +513,19 @@ export default function App() {
 
   function handleReset() {
     if (!focusOpen) {
-      if (!selectedBlock || !selectedBlockManifest) return
-      setComposition((prev) =>
-        updateBlock(prev, selectedBlock.id, () =>
-          defaultValues(selectedBlockManifest),
-        ),
-      )
+      if (selectedIds.length === 0) return
+      // Each selected component back to its own manifest defaults (Slice H).
+      setComposition((prev) => {
+        let next = prev
+        for (const id of selectedIds) {
+          const node = findComponentNode(next.root, id)
+          const nodeManifest = node && getManifest(node.component)
+          if (node && nodeManifest) {
+            next = updateBlock(next, id, () => defaultValues(nodeManifest))
+          }
+        }
+        return next
+      })
       return
     }
 
@@ -729,12 +744,21 @@ export default function App() {
    */
   function handleRandomize() {
     if (!focusOpen) {
-      if (!selectedBlock || !selectedBlockManifest) return
-      setComposition((prev) =>
-        updateBlock(prev, selectedBlock.id, (current) =>
-          randomizeValues(selectedBlockManifest, current, theme.mode),
-        ),
-      )
+      if (selectedIds.length === 0) return
+      // Each selected component gets its own fresh roll (Slice H).
+      setComposition((prev) => {
+        let next = prev
+        for (const id of selectedIds) {
+          const node = findComponentNode(next.root, id)
+          const nodeManifest = node && getManifest(node.component)
+          if (node && nodeManifest) {
+            next = updateBlock(next, id, (current) =>
+              randomizeValues(nodeManifest, current, theme.mode),
+            )
+          }
+        }
+        return next
+      })
       return
     }
 
@@ -922,8 +946,44 @@ export default function App() {
 
   // In compose mode the controls panel follows the canvas selection, so with
   // nothing selected there is nothing to configure.
-  const panelManifest = composing ? selectedBlockManifest : manifest
-  const panelValues = composing ? selectedBlock?.values : values
+  // A homogeneous multi-selection (Slice H part 2): every selected node is the
+  // same component, so one shared panel — seeded by the first of them — edits the
+  // whole set through the selection-aware editActive above. A mixed selection has
+  // no shared manifest, so it shows only the bulk layout controls.
+  const multiSelectedBlock = useMemo(() => {
+    if (!composing || selectedIds.length < 2) return null
+    const nodes = selectedIds.map((id) => findComponentNode(composition.root, id))
+    const first = nodes[0]
+    if (!first || nodes.some((node) => node === null || node.component !== first.component)) {
+      return null
+    }
+    return first
+  }, [composing, selectedIds, composition])
+
+  const panelManifest = multiSelectedBlock
+    ? getManifest(multiSelectedBlock.component)
+    : composing
+      ? selectedBlockManifest
+      : manifest
+  const panelValues = multiSelectedBlock
+    ? multiSelectedBlock.values
+    : composing
+      ? selectedBlock?.values
+      : values
+  const panelNote = multiSelectedBlock ? (
+    <>
+      Editing{' '}
+      <strong>
+        {selectedIds.length} × {panelManifest?.name}
+      </strong>{' '}
+      on the page — a change here applies to all.
+    </>
+  ) : composing ? (
+    <>
+      Editing the <strong>{panelManifest?.name}</strong> on the page. A value you
+      set here outranks the shared theme.
+    </>
+  ) : undefined
 
   // --- component-mode view lenses ---
   const device = deviceId ? DEVICES.find((entry) => entry.id === deviceId) ?? null : null
@@ -1422,14 +1482,7 @@ export default function App() {
               <ControlsPanel
                 manifest={panelManifest}
                 values={panelValues}
-                note={
-                  composing ? (
-                    <>
-                      Editing the <strong>{panelManifest.name}</strong> on the page.
-                      A value you set here outranks the shared theme.
-                    </>
-                  ) : undefined
-                }
+                note={panelNote}
                 onPropChange={handlePropChange}
                 onChildrenChange={handleChildrenChange}
                 onSlotPropChange={handleSlotPropChange}
