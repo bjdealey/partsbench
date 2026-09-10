@@ -159,6 +159,21 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* Slice E: a container's stack area — a subtle dashed frame so its bounds read
+   on the canvas, highlighted while a component is dragged onto it. */
+.containerStack {
+  width: 100%;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  transition: outline-color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
+}
+
+.containerDrop {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: var(--accent-soft);
+}
+
 /* --- blocks --- */
 
 .block {

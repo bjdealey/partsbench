@@ -108,6 +108,18 @@
   color: var(--danger);
 }
 
+/* A container row: a grouping, not a component, so its label reads quieter and
+   in the UI font rather than the component mono. Slice E. */
+.container .itemName {
+  font-family: inherit;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.container.active .itemName {
+  color: var(--accent);
+}
+
 .itemName {
   flex: 1;
   font-family: var(--mono);

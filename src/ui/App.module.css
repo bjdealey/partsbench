@@ -359,6 +359,86 @@
   color: var(--text-muted);
 }
 
+/* --- container (stack) controls, Slice E --- */
+
+/* Shown in the right panel when a container is selected instead of a component:
+   a container has no manifest, so it gets its own stack-layout controls. */
+.containerControls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.ccHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ccName {
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.ccUngroup {
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.ccUngroup:hover {
+  background: var(--panel-alt);
+  color: var(--text);
+}
+
+.ccHint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.ccRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ccField {
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.ccInput {
+  width: 148px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ccInput:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
 /* --- empty registry --- */
 
 .empty {

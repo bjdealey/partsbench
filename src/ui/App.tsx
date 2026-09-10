@@ -6,13 +6,17 @@ import { generateJSX, generateUsage } from '../lib/codegen'
 import { readUrl, writeUrl } from '../lib/urlState'
 import { readComposeUrl, writeComposeUrl } from '../lib/compositionUrl'
 import { appendEvent, eventTime, type LoggedEvent } from '../lib/eventLog'
-import type { Composition, PageSettings } from '../lib/composition'
+import type { Composition, ContainerLayout, PageSettings } from '../lib/composition'
 import {
   addBlock,
   addNodeAt,
+  addNodeToContainer,
   createBlock,
   findComponentNode,
+  findNode,
   pruneBlocks,
+  setContainerLayout,
+  ungroupContainer,
   updateBlock,
   DEVICES,
 } from '../lib/composition'
@@ -387,6 +391,12 @@ export default function App() {
   const selectedBlockManifest = selectedBlock
     ? getManifest(selectedBlock.component)
     : undefined
+  // A selected container drives the stack controls in the right panel (Slice E).
+  const selectedContainer = useMemo(() => {
+    if (focusOpen || !selectedBlockId) return null
+    const node = findNode(composition.root, selectedBlockId)
+    return node && node.kind === 'container' ? node : null
+  }, [focusOpen, composition, selectedBlockId])
 
   /**
    * One editing path for both modes.
@@ -720,6 +730,19 @@ export default function App() {
     setFocusOpen(false)
   }
 
+  /** Slice E: a library component dropped into a container nests inside it. */
+  function handleDropComponentInto(containerId: string, name: string) {
+    const picked = getManifest(name)
+    if (!picked) return
+    const block = createBlock(picked, { component: name, span: 12 })
+    setComposition((prev) => ({
+      ...addNodeToContainer(prev, containerId, block),
+      name: sceneByName(prev.name) ? `${prev.name} (edited)` : prev.name,
+    }))
+    setSelectedBlockId(block.id)
+    setFocusOpen(false)
+  }
+
   /* ---------------- panes ---------------- */
 
   // Ceilings are read off the window rather than measured from the DOM: these
@@ -1001,6 +1024,7 @@ export default function App() {
                 onSceneChange={handleSceneChange}
                 onPageChange={handlePageChange}
                 onDropComponent={handleDropComponent}
+                onDropComponentInto={handleDropComponentInto}
               />
             ) : contact && manifest && values ? (
               <ContactSheet
@@ -1140,7 +1164,97 @@ export default function App() {
               </>
             )}
 
-            {panelManifest && panelValues ? (
+            {selectedContainer ? (
+              <div className={styles.containerControls} data-container-controls="">
+                <div className={styles.ccHead}>
+                  <span className={styles.ccName}>Container</span>
+                  <button
+                    type="button"
+                    className={styles.ccUngroup}
+                    onClick={() => {
+                      setComposition((prev) => ungroupContainer(prev, selectedContainer.id))
+                      setSelectedBlockId(null)
+                    }}
+                  >
+                    Ungroup
+                  </button>
+                </div>
+                <p className={styles.ccHint}>
+                  A stack of components. Its children flow together — set the
+                  direction, spacing, and alignment here.
+                </p>
+                <label className={styles.ccRow}>
+                  <span className={styles.ccField}>Direction</span>
+                  <select
+                    className={styles.ccInput}
+                    value={selectedContainer.direction}
+                    onChange={(e) =>
+                      setComposition((prev) =>
+                        setContainerLayout(prev, selectedContainer.id, {
+                          direction: e.target.value as ContainerLayout['direction'],
+                        }),
+                      )
+                    }
+                  >
+                    <option value="column">Column (top to bottom)</option>
+                    <option value="row">Row (left to right)</option>
+                  </select>
+                </label>
+                <label className={styles.ccRow}>
+                  <span className={styles.ccField}>Align</span>
+                  <select
+                    className={styles.ccInput}
+                    value={selectedContainer.align}
+                    onChange={(e) =>
+                      setComposition((prev) =>
+                        setContainerLayout(prev, selectedContainer.id, {
+                          align: e.target.value as ContainerLayout['align'],
+                        }),
+                      )
+                    }
+                  >
+                    <option value="stretch">Stretch</option>
+                    <option value="start">Start</option>
+                    <option value="center">Center</option>
+                    <option value="end">End</option>
+                  </select>
+                </label>
+                <label className={styles.ccRow}>
+                  <span className={styles.ccField}>Gap</span>
+                  <input
+                    className={styles.ccInput}
+                    type="number"
+                    min={0}
+                    max={64}
+                    value={selectedContainer.gap}
+                    onChange={(e) =>
+                      setComposition((prev) =>
+                        setContainerLayout(prev, selectedContainer.id, {
+                          gap: Math.max(0, Math.min(64, Number(e.target.value) || 0)),
+                        }),
+                      )
+                    }
+                  />
+                </label>
+                <label className={styles.ccRow}>
+                  <span className={styles.ccField}>Padding</span>
+                  <input
+                    className={styles.ccInput}
+                    type="number"
+                    min={0}
+                    max={64}
+                    value={selectedContainer.padding}
+                    onChange={(e) =>
+                      setComposition((prev) =>
+                        setContainerLayout(prev, selectedContainer.id, {
+                          padding: Math.max(0, Math.min(64, Number(e.target.value) || 0)),
+                        }),
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            ) : panelManifest && panelValues ? (
               <ControlsPanel
                 manifest={panelManifest}
                 values={panelValues}
