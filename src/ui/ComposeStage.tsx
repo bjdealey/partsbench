@@ -135,6 +135,8 @@ interface ComposeStageProps {
   onDropComponentInto: (containerId: string, name: string) => void
   /** Drop a Published Component onto the canvas — inserts a copy (Slice F part 2). */
   onDropPublished: (id: string, index: number) => void
+  /** Open the code Export overlay for the whole page (Slice G). */
+  onExport: () => void
 }
 
 export default function ComposeStage({
@@ -154,6 +156,7 @@ export default function ComposeStage({
   onDropComponent,
   onDropComponentInto,
   onDropPublished,
+  onExport,
 }: ComposeStageProps) {
   const { root } = composition
   // The padding and gap tokens reach the page itself, so everything that
@@ -476,6 +479,17 @@ export default function ComposeStage({
             />
             <span className={styles.fieldValue}>{composition.page.width}</span>
           </label>
+
+          {/* Export the page's code — a read action, so it's here even in
+              Interact where the editing chrome is gone (Slice G). */}
+          <button
+            type="button"
+            className={styles.export}
+            onClick={onExport}
+            title="Export the page as code"
+          >
+            Export
+          </button>
 
           {/* An edit action, so it goes with the rest of the editing. */}
           {!interactive && (

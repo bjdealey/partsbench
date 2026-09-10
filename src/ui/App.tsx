@@ -42,14 +42,6 @@ import type {
 } from '../lib/types'
 import { SPLITTER, usePane } from '../lib/panes'
 import {
-  loadVariants,
-  saveVariant,
-  renameVariant,
-  deleteVariant,
-  nextVariantName,
-  type Variant,
-} from '../lib/variants'
-import {
   loadLibrary,
   saveToLibrary,
   renameLibraryEntry,
@@ -70,7 +62,6 @@ import Sidebar from './Sidebar'
 import HeaderSearch from './HeaderSearch'
 import PreviewStage, { type StageTheme } from './PreviewStage'
 import ContactSheet from './ContactSheet'
-import VariantsStrip from './VariantsStrip'
 import BlockOutline from './BlockOutline'
 import MyLibrary from './MyLibrary'
 import ComposeStage from './ComposeStage'
@@ -78,7 +69,8 @@ import ThemePanel from './ThemePanel'
 import AddBlockDialog from './AddBlockDialog'
 import CommandMenu, { type Command } from './CommandMenu'
 import ControlsPanel from './ControlsPanel'
-import CodePanel, { COMPONENT_VIEWS, PAGE_VIEWS } from './CodePanel'
+import { COMPONENT_VIEWS, PAGE_VIEWS } from './CodePanel'
+import ExportDialog from './ExportDialog'
 import EventLog from './EventLog'
 import { Glyph } from './icons'
 import styles from './App.module.css'
@@ -209,15 +201,12 @@ export default function App() {
   const [deviceId, setDeviceId] = useState<string | null>(null)
   // The "see it across every theme" grid, shown in place of the single preview.
   const [contact, setContact] = useState(false)
-  // Code and Events live in a collapsible output drawer below the preview, closed
-  // by default so the preview is the star rather than one panel among many.
+  // The Event log lives in a collapsible dev drawer below the canvas, closed by
+  // default (Slice G). Code moved out to the on-demand Export dialog.
   const [outputOpen, setOutputOpen] = useState(false)
-  const [outputTab, setOutputTab] = useState<'code' | 'events'>('code')
-
-  // Saved Variants of the current component (localStorage), plus which one is
-  // applied so its chip can show its actions. Loaded per component below.
-  const [variants, setVariants] = useState<Variant[]>([])
-  const [activeVariantId, setActiveVariantId] = useState<string | null>(null)
+  // Code export overlay (Slice G): the generated code, on demand from the toolbar
+  // rather than a mode-bound drawer tab.
+  const [exporting, setExporting] = useState(false)
 
   // My Library (Slice F): the owner's saved pages (localStorage). The old
   // per-component Variants are imported once on first run — see the effect below.
@@ -268,13 +257,6 @@ export default function App() {
   useEffect(() => {
     setEvents([])
   }, [activeName, focusOpen])
-
-  // Variants are per component; load the current one's set and drop any applied
-  // highlight when the component changes.
-  useEffect(() => {
-    setVariants(loadVariants(activeName))
-    setActiveVariantId(null)
-  }, [activeName])
 
   // Paint the whole workbench chrome in the site-wide light/dark: the toggle sets
   // data-theme on the root, and global.css swaps the chrome palette under it. The
@@ -599,34 +581,6 @@ export default function App() {
     setPresetName(name)
   }
 
-  /**
-   * Save the component's current Values (props, children, slots, effects) as a
-   * named Variant. The viewing lenses — theme preset, device, light/dark — are
-   * deliberately not captured, so a Variant can be viewed under any of them.
-   */
-  function handleSaveVariant(name: string) {
-    if (!manifest || !values) return
-    const next = saveVariant(activeName, name, values)
-    setVariants(next)
-    setActiveVariantId(next[next.length - 1]?.id ?? null)
-  }
-
-  function handleApplyVariant(variant: Variant) {
-    // Clone so editing after applying can't mutate the saved snapshot.
-    const applied: PlaygroundValues = JSON.parse(JSON.stringify(variant.values))
-    setValuesByName((prev) => ({ ...prev, [activeName]: applied }))
-    setActiveVariantId(variant.id)
-  }
-
-  function handleRenameVariant(id: string, name: string) {
-    setVariants(renameVariant(activeName, id, name))
-  }
-
-  function handleDeleteVariant(variant: Variant) {
-    setVariants(deleteVariant(activeName, variant.id))
-    if (activeVariantId === variant.id) setActiveVariantId(null)
-  }
-
   /* ---------------- My Library (Slice F) ---------------- */
 
   // Save the whole page — its node tree, page settings, and theme — to the
@@ -890,14 +844,6 @@ export default function App() {
     axis: 'x',
   })
 
-  const codePane = usePane('code', {
-    initial: 236,
-    min: 96,
-    max: () => window.innerHeight - 260,
-    direction: -1,
-    axis: 'y',
-  })
-
   const themePane = usePane('theme', {
     initial: 372,
     min: 140,
@@ -910,14 +856,6 @@ export default function App() {
 
   // The canvas surface: everything that isn't the single-component focus overlay.
   const composing = !focusOpen
-
-  // The full-source view is far longer than anything else and used to get its
-  // own taller cap. It still does — right up until the pane is sized by hand,
-  // at which point that is the answer and nothing should be overriding it.
-  const codeHeight =
-    !codePane.custom && wantFull && !composing
-      ? Math.max(codePane.size, Math.round(window.innerHeight * 0.46))
-      : codePane.size
 
   const bare = composing && interactive
 
@@ -1006,6 +944,15 @@ export default function App() {
         onClick={() => setContact((on) => !on)}
       >
         Contact sheet
+      </button>
+
+      <button
+        type="button"
+        className={styles.lensContact}
+        title="Export this component's code"
+        onClick={() => setExporting(true)}
+      >
+        Export
       </button>
     </div>
   )
@@ -1182,6 +1129,7 @@ export default function App() {
                 onDropComponent={handleDropComponent}
                 onDropComponentInto={handleDropComponentInto}
                 onDropPublished={handleDropPublished}
+                onExport={() => setExporting(true)}
               />
             ) : contact && manifest && values ? (
               <ContactSheet
@@ -1206,95 +1154,28 @@ export default function App() {
               />
             ) : null}
 
-            {focusOpen && (
-              <VariantsStrip
-                variants={variants}
-                activeId={activeVariantId}
-                suggestedName={nextVariantName(variants)}
-                onApply={handleApplyVariant}
-                onSave={handleSaveVariant}
-                onRename={handleRenameVariant}
-                onDelete={handleDeleteVariant}
-              />
-            )}
-
-            {(
-              // Focus and Canvas share one collapsible output drawer
-              // (Code · Events), closed by default so the preview/canvas leads.
-              <div
-                className={`${styles.output} ${outputOpen ? styles.outputOpen : ''}`}
-              >
-                <div className={styles.outputBar}>
-                  <div className={styles.outputTabs} role="tablist" aria-label="Output">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={outputOpen && outputTab === 'code'}
-                      className={`${styles.outputTab} ${
-                        outputOpen && outputTab === 'code' ? styles.outputTabActive : ''
-                      }`}
-                      onClick={() => {
-                        if (outputOpen && outputTab === 'code') setOutputOpen(false)
-                        else {
-                          setOutputTab('code')
-                          setOutputOpen(true)
-                        }
-                      }}
-                    >
-                      Code
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={outputOpen && outputTab === 'events'}
-                      className={`${styles.outputTab} ${
-                        outputOpen && outputTab === 'events' ? styles.outputTabActive : ''
-                      }`}
-                      onClick={() => {
-                        if (outputOpen && outputTab === 'events') setOutputOpen(false)
-                        else {
-                          setOutputTab('events')
-                          setOutputOpen(true)
-                        }
-                      }}
-                    >
-                      Events
-                      {eventTotal > 0 && (
-                        <span className={styles.outputBadge}>{eventTotal}</span>
-                      )}
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.outputToggle}
-                    aria-expanded={outputOpen}
-                    onClick={() => setOutputOpen((open) => !open)}
-                  >
-                    {outputOpen ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-
-                {outputOpen && outputTab === 'code' && (
-                  <>
-                    <Splitter pane={codePane} label="Code panel height" />
-                    <CodePanel
-                      height={codeHeight}
-                      snippets={composing ? pageSnippets : { ...snippets, full }}
-                      views={composing ? PAGE_VIEWS : COMPONENT_VIEWS}
-                      includeDefaults={includeDefaults}
-                      onIncludeDefaultsChange={setIncludeDefaults}
-                      onNeedFull={() => setWantFull(true)}
-                    />
-                  </>
-                )}
-
-                {outputOpen && outputTab === 'events' && (
-                  <div className={styles.outputEvents}>
-                    <EventLog events={events} onClear={() => setEvents([])} embedded />
-                  </div>
-                )}
+            {/* The Event log — a collapsible dev drawer below the canvas, closed by
+                default (Slice G). Code moved to the Export dialog. */}
+            <div className={`${styles.output} ${outputOpen ? styles.outputOpen : ''}`}>
+              <div className={styles.outputBar}>
+                <button
+                  type="button"
+                  className={styles.outputToggle}
+                  aria-expanded={outputOpen}
+                  onClick={() => setOutputOpen((open) => !open)}
+                >
+                  Event log
+                  {eventTotal > 0 && <span className={styles.outputBadge}>{eventTotal}</span>}
+                  <span className={styles.outputToggleHint}>{outputOpen ? 'Hide' : 'Show'}</span>
+                </button>
               </div>
-            )}
+
+              {outputOpen && (
+                <div className={styles.outputEvents}>
+                  <EventLog events={events} onClear={() => setEvents([])} embedded />
+                </div>
+              )}
+            </div>
           </main>
 
           {!bare && <Splitter pane={rightPane} label="Controls panel width" />}
@@ -1526,6 +1407,18 @@ export default function App() {
 
       {commandOpen && (
         <CommandMenu commands={commands} onClose={() => setCommandOpen(false)} />
+      )}
+
+      {exporting && (
+        <ExportDialog
+          subject={composing ? 'page' : activeName}
+          snippets={composing ? pageSnippets : { ...snippets, full }}
+          views={composing ? PAGE_VIEWS : COMPONENT_VIEWS}
+          includeDefaults={includeDefaults}
+          onIncludeDefaultsChange={setIncludeDefaults}
+          onNeedFull={() => setWantFull(true)}
+          onClose={() => setExporting(false)}
+        />
       )}
     </div>
   )

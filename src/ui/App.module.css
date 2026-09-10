@@ -669,36 +669,6 @@
   padding: 0 12px 0 8px;
 }
 
-.outputTabs {
-  display: inline-flex;
-  gap: 2px;
-}
-
-.outputTab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 10px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 12px;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
-}
-
-.outputTab:hover {
-  color: var(--text);
-}
-
-.outputTabActive,
-.outputTabActive:hover {
-  color: var(--text);
-  font-weight: 500;
-  border-bottom-color: var(--accent);
-}
-
 .outputBadge {
   min-width: 16px;
   padding: 1px 5px;
@@ -711,20 +681,30 @@
   text-align: center;
 }
 
+/* The whole Event-log bar is one toggle now: label · badge · Hide/Show hint. */
 .outputToggle {
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   background: transparent;
-  color: var(--text-faint);
-  font-size: 11.5px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+  transition: color var(--dur-1) var(--ease);
 }
 
 .outputToggle:hover {
-  background: var(--panel-alt);
   color: var(--text);
+}
+
+.outputToggleHint {
+  color: var(--text-faint);
+  font-weight: 400;
+  font-size: 11.5px;
 }
 
 .outputEvents {

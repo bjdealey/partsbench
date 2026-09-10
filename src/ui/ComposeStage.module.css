@@ -112,6 +112,30 @@
   filter: brightness(0.93);
 }
 
+/* Secondary toolbar action (Slice G Export) — quieter than the accent Add. */
+.export {
+  padding: 5px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.export:hover {
+  background: var(--panel-alt);
+  color: var(--text);
+}
+
+.export:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
 /* --- canvas --- */
 
 .scroll {
