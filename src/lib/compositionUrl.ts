@@ -51,7 +51,7 @@ interface EncodedContainer {
 
 type EncodedNode = EncodedBlock | EncodedContainer
 
-interface EncodedComposition {
+export interface EncodedComposition {
   scene: string
   page: PageSettings
   theme: Theme
@@ -121,13 +121,16 @@ function encodeNode(node: Node): EncodedNode {
   return encoded
 }
 
-export function writeComposeUrl(composition: Composition, theme: Theme): void {
-  // A page with no containers is written the old way, under `blocks`, so the
-  // encoded string is byte-identical to what earlier versions produced and no
-  // existing link changes. A container tips the whole page over to `root`.
+/**
+ * The shareable encoding of a composition — the same payload the URL hash
+ * carries, extracted so My Library can store it and Share/Import can round-trip
+ * through it (Slice F). A flat page (no containers) is written the old way,
+ * under `blocks`, byte-identical to what earlier versions produced so no
+ * existing link changes; a container tips the whole page over to `root`.
+ */
+export function encodeComposition(composition: Composition, theme: Theme): EncodedComposition {
   const flat = composition.root.every((node) => node.kind === 'component')
-
-  const payload: EncodedComposition = {
+  return {
     scene: composition.name,
     page: composition.page,
     theme,
@@ -135,8 +138,10 @@ export function writeComposeUrl(composition: Composition, theme: Theme): void {
       ? { blocks: composition.root.map((node) => encodeBlock(node as ComponentNode)) }
       : { root: composition.root.map(encodeNode) }),
   }
+}
 
-  const hash = `#${COMPOSE_ROUTE}/${encodePayload(payload)}`
+export function writeComposeUrl(composition: Composition, theme: Theme): void {
+  const hash = `#${COMPOSE_ROUTE}/${encodePayload(encodeComposition(composition, theme))}`
   if (window.location.hash === hash) return
   // replaceState, so dragging a density slider doesn't fill the back button.
   window.history.replaceState(null, '', hash)
@@ -281,15 +286,13 @@ export interface ParsedComposeUrl {
   theme: Theme
 }
 
-/** Null when the hash is not a compose hash, or cannot be read. */
-export function readComposeUrl(): ParsedComposeUrl | null {
-  const raw = window.location.hash.replace(/^#\/?/, '')
-  if (!raw.startsWith(COMPOSE_ROUTE)) return null
-
-  const encoded = raw.slice(COMPOSE_ROUTE.length).replace(/^\//, '')
-  if (!encoded) return null
-
-  const payload = decodePayload<EncodedComposition>(encoded)
+/**
+ * Rebuilds a composition from a stored/shared payload. Leaves that no longer
+ * resolve drop out; every node is minted a fresh id, so an opened tree never
+ * collides with what's already on the canvas. Null when the payload carries no
+ * node list at all. Shared by the hash reader and My Library (Slice F).
+ */
+export function decodeComposition(payload: EncodedComposition | null | undefined): ParsedComposeUrl | null {
   if (!payload || (!Array.isArray(payload.root) && !Array.isArray(payload.blocks))) {
     return null
   }
@@ -311,4 +314,15 @@ export function readComposeUrl(): ParsedComposeUrl | null {
     },
     theme: reviveTheme(payload.theme, page.background),
   }
+}
+
+/** Null when the hash is not a compose hash, or cannot be read. */
+export function readComposeUrl(): ParsedComposeUrl | null {
+  const raw = window.location.hash.replace(/^#\/?/, '')
+  if (!raw.startsWith(COMPOSE_ROUTE)) return null
+
+  const encoded = raw.slice(COMPOSE_ROUTE.length).replace(/^\//, '')
+  if (!encoded) return null
+
+  return decodeComposition(decodePayload<EncodedComposition>(encoded))
 }
