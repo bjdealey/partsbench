@@ -47,7 +47,6 @@ import {
 import Splitter from './Splitter'
 import Sidebar from './Sidebar'
 import HeaderSearch from './HeaderSearch'
-import Gallery from './Gallery'
 import PreviewStage, { type StageTheme } from './PreviewStage'
 import ContactSheet from './ContactSheet'
 import VariantsStrip from './VariantsStrip'
@@ -61,18 +60,6 @@ import CodePanel, { COMPONENT_VIEWS, PAGE_VIEWS } from './CodePanel'
 import EventLog from './EventLog'
 import { Glyph } from './icons'
 import styles from './App.module.css'
-
-type Mode = 'gallery' | 'component' | 'compose'
-
-const MODES: { id: Mode; label: string; hint: string }[] = [
-  { id: 'gallery', label: 'Gallery', hint: 'Every component as a tile' },
-  { id: 'component', label: 'Component', hint: 'One component, every prop' },
-  {
-    id: 'compose',
-    label: 'Compose',
-    hint: 'A page of components under one shared theme',
-  },
-]
 
 /** The three layout regions become tabs on a narrow screen. */
 type MobileTab = 'left' | 'center' | 'right'
@@ -95,11 +82,16 @@ export default function App() {
   const fromUrl = readUrl()
   const fromComposeUrl = readComposeUrl()
 
-  // A deep link (component hash or compose hash) opens straight to that view;
-  // a bare load lands on the gallery — the browse-all overview.
-  const [mode, setMode] = useState<Mode>(
-    fromComposeUrl ? 'compose' : fromUrl ? 'component' : 'gallery',
+  // The workbench is one surface (Slice C): the canvas is home, and a component
+  // opens in a focus overlay (the old Component mode), driven by `selected`
+  // below. A component deep-link opens focused; a compose link or a bare load
+  // lands on the canvas. The Mode segmented control is gone.
+  const [focusOpen, setFocusOpen] = useState<boolean>(
+    () => !!(fromUrl && manifests.some((entry) => entry.name === fromUrl.name)),
   )
+  // Which section the left rail shows: the component Library (browse) or the
+  // canvas Outline. One rail, both reachable, independent of the surface.
+  const [railTab, setRailTab] = useState<'library' | 'outline'>('library')
 
   const [selected, setSelected] = useState(() => {
     const named = fromUrl && manifests.some((entry) => entry.name === fromUrl.name)
@@ -163,7 +155,7 @@ export default function App() {
     // The contact sheet is a lens on the component in front of you; drop it when
     // that component or the mode changes.
     setContact(false)
-  }, [selected, mode])
+  }, [selected, focusOpen])
 
   // Escape closes the list drawer, the way it dismisses any overlay.
   useEffect(() => {
@@ -235,7 +227,7 @@ export default function App() {
   // modes is the same problem: a page's events are not one component's.
   useEffect(() => {
     setEvents([])
-  }, [activeName, mode])
+  }, [activeName, focusOpen])
 
   // Variants are per component; load the current one's set and drop any applied
   // highlight when the component changes.
@@ -287,18 +279,11 @@ export default function App() {
   // it. Which state that is depends on the mode, so the two routes never fight
   // over the hash.
   useEffect(() => {
-    if (mode === 'compose') writeComposeUrl(composition, theme)
-    else if (mode === 'component' && manifest && values) writeUrl(manifest, values)
-    else if (mode === 'gallery' && window.location.hash) {
-      // The gallery isn't a single component, so it owns no hash — and clearing
-      // a stale one means a reload returns to the gallery, not the last component.
-      window.history.replaceState(
-        null,
-        '',
-        window.location.pathname + window.location.search,
-      )
-    }
-  }, [mode, composition, theme, manifest, values])
+    // The canvas is home and owns the compose hash; a focused component owns the
+    // single-component hash. The two routes never fight over it.
+    if (!focusOpen) writeComposeUrl(composition, theme)
+    else if (manifest && values) writeUrl(manifest, values)
+  }, [focusOpen, composition, theme, manifest, values])
 
   // Adopt a hash pasted into an already-open playground. Without this the
   // effect above would simply overwrite it with whatever is on screen.
@@ -306,7 +291,7 @@ export default function App() {
     function adopt() {
       const composed = readComposeUrl()
       if (composed) {
-        setMode('compose')
+        setFocusOpen(false)
         setComposition(pruneBlocks(composed.composition))
         setTheme(composed.theme)
         setSelectedBlockId(null)
@@ -318,7 +303,7 @@ export default function App() {
       const target = manifests.find((entry) => entry.name === parsed.name)
       if (!target) return
 
-      setMode('component')
+      setFocusOpen(true)
       setSelected(target.name)
       setValuesByName((prev) => ({ ...prev, [target.name]: parsed.apply(target) }))
     }
@@ -383,10 +368,10 @@ export default function App() {
     })
   }
 
-  /** Open a component from the gallery into its see-it-and-edit-it detail view. */
+  /** Open a component in its focus overlay — the see-it-and-edit-it detail view. */
   function openComponent(name: string) {
     setInteractive(false)
-    setMode('component')
+    setFocusOpen(true)
     setSelected(name)
     // On the phone the detail opens straight to the preview, not the list tab.
     setMobileTab('center')
@@ -409,7 +394,7 @@ export default function App() {
    * "editing the Button on the page" lives here rather than in every handler.
    */
   function editActive(update: (prev: PlaygroundValues) => PlaygroundValues) {
-    if (mode === 'compose') {
+    if (!focusOpen) {
       if (!selectedBlock) return
       setComposition((prev) => updateBlock(prev, selectedBlock.id, update))
       return
@@ -468,7 +453,7 @@ export default function App() {
   }
 
   function handleReset() {
-    if (mode === 'compose') {
+    if (!focusOpen) {
       if (!selectedBlock || !selectedBlockManifest) return
       setComposition((prev) =>
         updateBlock(prev, selectedBlock.id, () =>
@@ -509,7 +494,7 @@ export default function App() {
     // Populate it from the same archetype — only in component mode, and only for
     // the component in front of you, since effects are per-component. Compose
     // keeps its own shared-theme envelope, and the gallery shows no effects.
-    if (mode === 'component' && manifest) {
+    if (focusOpen && manifest) {
       setValuesByName((prev) => {
         const current = prev[activeName] ?? defaultValues(manifest)
         return {
@@ -601,7 +586,7 @@ export default function App() {
    * everywhere else it generates the global design system above.
    */
   function handleRandomize() {
-    if (mode === 'compose') {
+    if (!focusOpen) {
       if (!selectedBlock || !selectedBlockManifest) return
       setComposition((prev) =>
         updateBlock(prev, selectedBlock.id, (current) =>
@@ -672,43 +657,23 @@ export default function App() {
   const commands = useMemo<Command[]>(
     () => [
       {
-        id: 'mode-gallery',
+        id: 'go-canvas',
         group: 'Go',
-        label: 'Gallery',
-        hint: 'all components',
+        label: 'Canvas',
+        hint: 'the composition',
         run: () => {
           setInteractive(false)
-          setMode('gallery')
-        },
-      },
-      {
-        id: 'mode-component',
-        group: 'Go',
-        label: 'Component mode',
-        hint: 'one component',
-        run: () => {
-          setInteractive(false)
-          setMode('component')
-        },
-      },
-      {
-        id: 'mode-compose',
-        group: 'Go',
-        label: 'Compose mode',
-        hint: 'a page',
-        run: () => {
-          setInteractive(false)
-          setMode('compose')
+          setFocusOpen(false)
         },
       },
       {
         id: 'add-block',
         group: 'Go',
         label: 'Add a component to the page',
-        hint: 'compose',
+        hint: 'canvas',
         run: () => {
           setInteractive(false)
-          setMode('compose')
+          setFocusOpen(false)
           setPicking(true)
         },
       },
@@ -720,7 +685,7 @@ export default function App() {
         mono: true,
         run: () => {
           setInteractive(false)
-          setMode('component')
+          setFocusOpen(true)
           setSelected(entry.name)
           setMobileTab('center')
         },
@@ -773,7 +738,8 @@ export default function App() {
 
   /* ---------------- render ---------------- */
 
-  const composing = mode === 'compose'
+  // The canvas surface: everything that isn't the single-component focus overlay.
+  const composing = !focusOpen
 
   // The full-source view is far longer than anything else and used to get its
   // own taller cap. It still does — right up until the pane is sized by hand,
@@ -817,6 +783,14 @@ export default function App() {
 
   const lensToolbar = (
     <div className={styles.lens}>
+      <button
+        type="button"
+        className={styles.lensContact}
+        title="Back to the canvas"
+        onClick={() => setFocusOpen(false)}
+      >
+        ← Canvas
+      </button>
       <label className={styles.lensField}>
         <span className={styles.lensName}>Theme</span>
         <select
@@ -894,33 +868,13 @@ export default function App() {
           </button>
         </div>
 
-        <div className={styles.modes} role="group" aria-label="Mode">
-          {MODES.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              title={option.hint}
-              aria-pressed={mode === option.id}
-              className={`${styles.mode} ${mode === option.id ? styles.modeActive : ''}`}
-              onClick={() => setMode(option.id)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
         <div className={styles.headerRight}>
           {/* The list is hidden by default, so a jump-to-a-component finder sits
               here in its place — only while the list is actually hidden. */}
           {!isMobile && !drawerOpen && (
             <HeaderSearch
               manifests={manifests}
-              onSelect={(name) => {
-                setInteractive(false)
-                setMode('component')
-                setSelected(name)
-                setMobileTab('center')
-              }}
+              onSelect={openComponent}
             />
           )}
 
@@ -959,41 +913,56 @@ export default function App() {
           className={styles.layout}
           style={{ gridTemplateColumns: columns }}
         >
-          {renderRail &&
-            (composing ? (
-              <BlockOutline
-                className={leftHidden}
-                composition={composition}
-                selectedId={selectedBlockId}
-                onSelect={(id) => {
-                  setSelectedBlockId(id)
-                  if (isMobile) setMobileTab('center')
-                }}
-                onAdd={() => setPicking(true)}
-              />
-            ) : (
-              <Sidebar
-                className={leftHidden}
-                manifests={manifests}
-                selected={activeName}
-                onSelect={(name) => {
-                  setSelected(name)
-                  setMode('component')
-                  if (isMobile) setMobileTab('center')
-                }}
-                onStep={handleStep}
-              />
-            ))}
+          {renderRail && (
+            <div className={`${styles.rail} ${leftHidden}`}>
+              <div className={styles.railTabs}>
+                <div className={styles.modes} role="tablist" aria-label="Rail section">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={railTab === 'library'}
+                    className={`${styles.mode} ${railTab === 'library' ? styles.modeActive : ''}`}
+                    onClick={() => setRailTab('library')}
+                  >
+                    Library
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={railTab === 'outline'}
+                    className={`${styles.mode} ${railTab === 'outline' ? styles.modeActive : ''}`}
+                    onClick={() => setRailTab('outline')}
+                  >
+                    Outline
+                  </button>
+                </div>
+              </div>
+              {railTab === 'library' ? (
+                <Sidebar
+                  className={styles.railBody}
+                  manifests={manifests}
+                  selected={focusOpen ? activeName : ''}
+                  onSelect={openComponent}
+                  onStep={handleStep}
+                />
+              ) : (
+                <BlockOutline
+                  className={styles.railBody}
+                  composition={composition}
+                  selectedId={selectedBlockId}
+                  onSelect={(id) => {
+                    setSelectedBlockId(id)
+                    setFocusOpen(false)
+                    if (isMobile) setMobileTab('center')
+                  }}
+                  onAdd={() => setPicking(true)}
+                />
+              )}
+            </div>
+          )}
 
           <main className={`${styles.center} ${centerHidden}`}>
-            {mode === 'gallery' ? (
-              <Gallery
-                manifests={manifests}
-                onOpen={openComponent}
-                design={designActive ? theme : null}
-                onRandomize={() => randomizeGlobalDesign(stageTheme)}
-              />
-            ) : composing ? (
+            {composing ? (
               <ComposeStage
                 composition={composition}
                 theme={theme}
@@ -1041,7 +1010,7 @@ export default function App() {
               />
             ) : null}
 
-            {mode === 'component' && (
+            {focusOpen && (
               <VariantsStrip
                 variants={variants}
                 activeId={activeVariantId}
@@ -1053,8 +1022,8 @@ export default function App() {
               />
             )}
 
-            {mode !== 'gallery' && (
-              // Component and Compose share one collapsible output drawer
+            {(
+              // Focus and Canvas share one collapsible output drawer
               // (Code · Events), closed by default so the preview/canvas leads.
               <div
                 className={`${styles.output} ${outputOpen ? styles.outputOpen : ''}`}
@@ -1136,26 +1105,6 @@ export default function App() {
 
           {!bare && (
           <div className={`${styles.right} ${rightHidden}`}>
-            {mode === 'gallery' ? (
-              <div className={styles.galleryTheme}>
-                <ThemePanel
-                  theme={theme}
-                  onChange={(next) => {
-                    setTheme(next)
-                    setDesignActive(true)
-                  }}
-                  onPresetPage={(background) =>
-                    setComposition((prev) => ({
-                      ...prev,
-                      page: { ...prev.page, background },
-                    }))
-                  }
-                  composition={composition}
-                  onRandomize={() => randomizeGlobalDesign(stageTheme)}
-                />
-              </div>
-            ) : (
-              <>
             {composing && (
               <>
                 <div className={styles.themeSlot} style={{ height: themePane.size }}>
@@ -1205,8 +1154,6 @@ export default function App() {
                 </p>
               </div>
             )}
-              </>
-            )}
           </div>
           )}
         </div>
@@ -1215,15 +1162,15 @@ export default function App() {
       {tabbed && (
         <nav className={styles.mobileTabs} aria-label="Region">
           {[
-            { id: 'left' as const, label: composing ? 'Blocks' : 'Components', icon: 'list' },
+            { id: 'left' as const, label: railTab === 'library' ? 'Library' : 'Outline', icon: 'list' },
             {
               id: 'center' as const,
-              label: mode === 'gallery' ? 'Gallery' : composing ? 'Canvas' : 'Preview',
+              label: composing ? 'Canvas' : 'Preview',
               icon: composing ? 'canvas' : 'eye',
             },
             {
               id: 'right' as const,
-              label: mode === 'gallery' ? 'Theme' : 'Controls',
+              label: 'Controls',
               icon: 'sliders',
             },
           ].map((tab) => (
